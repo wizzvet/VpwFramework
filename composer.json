@@ -1,13 +1,13 @@
 {
-    "name":"vosprojetsweb/vpwframework",
+    "name": "vosprojetsweb/vpwframework",
     "description": "Vos Projets Web Framework",
     "type": "library",
     "require": {
-        "php": ">=5.4.7",
+        "php": ">=5.4.7"
     },
     "autoload": {
         "psr-0": {
-            "Vpw\\": "src/",
-        },
+            "Vpw\\": "src/"
+        }
     }
 }
