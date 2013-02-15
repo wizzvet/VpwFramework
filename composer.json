@@ -1,0 +1,6 @@
+{
+    "name":"vosprojetsweb/vpwframework",
+    "require": {
+        "php": ">=5.4.7",
+    }
+}
