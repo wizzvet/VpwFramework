@@ -52,6 +52,7 @@ class EventManagerDebug extends \Zend\EventManager\EventManager
             // response collection
             $listenerCallback = $listener->getCallback();
 
+            /*
             echo 'Event : ', $e->getName(),  ', ';
 
             echo 'Target : ', get_class($e->getTarget()), ', ';
@@ -63,7 +64,7 @@ class EventManagerDebug extends \Zend\EventManager\EventManager
             echo 'Priority : ', $listener->getMetadatum('priority');
 
             echo '<br/>';
-
+            */
             //$this->printStackTrace();
 
             $responses->push(call_user_func($listenerCallback, $e));

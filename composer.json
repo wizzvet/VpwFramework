@@ -3,7 +3,8 @@
     "description": "Vos Projets Web Framework",
     "type": "library",
     "require": {
-        "php": ">=5.4.7"
+        "php": ">=5.4.7",
+        "zendframework/zendframework": "2.1.*"
     },
     "autoload": {
         "psr-0": {
