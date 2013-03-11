@@ -94,13 +94,13 @@ class EventManagerDebug extends \Zend\EventManager\EventManager
     {
         if (is_string($callback)) {
             echo $callback, ' ';
-        } else if (is_object($callback)) {
+        } elseif (is_object($callback)) {
             echo get_class($callback), ' ';
-        } else if (is_array($callback)) {
+        } elseif (is_array($callback)) {
             foreach ($callback as $tmp) {
                 if (is_object($tmp)) {
                     echo get_class($tmp), ' ';
-                } else if (is_string($tmp)) {
+                } elseif (is_string($tmp)) {
                     echo $tmp, ' ';
                 } else {
                     echo gettype($tmp), ' ';
@@ -116,7 +116,7 @@ class EventManagerDebug extends \Zend\EventManager\EventManager
         $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
         $size = sizeof($backtrace);
 
-        for ($i = 1; $i < $size; $i++){
+        for ($i = 1; $i < $size; $i++) {
             echo $backtrace[$i]['class'],$backtrace[$i]['type'], $backtrace[$i]['function'], '<br/>';
         }
     }

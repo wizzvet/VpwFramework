@@ -18,7 +18,6 @@ class Metadata extends \Zend\Db\Metadata\Metadata
         switch ($adapter->getPlatform()->getName()) {
             case 'MySQL':
                 return new Source\MysqlMetadata($adapter);
-
             default:
                 return parent::createSourceFromAdapter($adapter);
         }

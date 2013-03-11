@@ -1,5 +1,5 @@
 <?php
-namespace ZfeDataTest\TestAsset;
+namespace VpwTest\Dal\Asset;
 
 use Zend\Db\Adapter\Driver\ResultInterface;
 

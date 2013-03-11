@@ -1,13 +1,11 @@
 <?php
-namespace ZfeDataTest;
+namespace VpwTest\Dal\Mapper;
 
-use ZfeDataTest\TestAsset\FooObject;
+use VpwTest\Dal\Asset\FooObject;
 
-use ZfeDataTest\TestAsset\FooEntity;
+use Vpw\Dal\Mapper\MockMapper;
 
 use Zend\Http\Client\Adapter\Test;
-
-use ZfeData\Mapper\MockMapper;
 
 use PHPUnit_Framework_TestCase;
 

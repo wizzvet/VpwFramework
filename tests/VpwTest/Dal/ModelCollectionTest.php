@@ -1,21 +1,21 @@
 <?php
-namespace ZfeDataTest;
+namespace VpwTest\Dal;
 
-use ZfeDataTest\TestAsset\MockResult;
+use VpwTest\Dal\Asset\MockResult;
 
-use ZfeDataTest\TestAsset\FooObject;
+use VpwTest\Dal\Asset\FooObject;
 
-use ZfeData\DataCollection;
+use Vpw\Dal\ModelCollection;
 
 use PHPUnit_Framework_TestCase;
 
-class DataCollectionTest extends PHPUnit_Framework_TestCase
+class ModelCollectionTest extends PHPUnit_Framework_TestCase
 {
     private $collection;
 
     public function setUp()
     {
-        $this->collection = new DataCollection(new FooObject());
+        $this->collection = new ModelCollection(new FooObject());
         $this->collection->initialize(
             new MockResult(
                 array(
@@ -43,12 +43,12 @@ class DataCollectionTest extends PHPUnit_Framework_TestCase
     {
         $this->collection->rewind();
         $o = $this->collection->current();
-        $this->assertInstanceOf('\ZfeData\DataObject', $o);
+        $this->assertInstanceOf('\Vpw\Dal\ModelObject', $o);
         $this->assertEquals('bar', $o->getFoo());
 
         $this->collection->next();
         $o = $this->collection->current();
-        $this->assertInstanceOf('\ZfeDataTest\TestAsset\FooObject', $o);
+        $this->assertInstanceOf('\VpwTest\Dal\Asset\FooObject', $o);
         $this->assertEquals('bar2', $o->getFoo());
     }
 }

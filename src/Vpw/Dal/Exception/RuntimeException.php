@@ -1,5 +1,5 @@
 <?php
-namespace Vpw\DataSource\Exception;
+namespace Vpw\Dal\Exception;
 
 /**
  * @category   Zend

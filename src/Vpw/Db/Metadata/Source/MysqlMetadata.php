@@ -1,4 +1,11 @@
 <?php
+/**
+ * Mysql meta data source avec une fonctionnalité en plus que celle du ZF2 :
+ *  - Indique via le champ "erratas", si une colonne à la flag "AUTO_INCREMENT"
+ *
+ * @author christophe.borsenberger@vosprojetsweb.pro
+ */
+
 namespace Vpw\Db\Metadata\Source;
 
 use Zend\Db\Adapter\Adapter;

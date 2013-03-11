@@ -115,6 +115,7 @@
         <exec executable="phpcs">
             <arg value="--standard=${basedir}/build/phpcs.xml" />
             <arg path="${basedir}/src" />
+            <arg path="${basedir}/tests" />
         </exec>
     </target>
     <target

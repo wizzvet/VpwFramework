@@ -1,11 +1,11 @@
 <?php
-namespace Vpw\DataSource;
+namespace Vpw\Dal;
 
 use Zend\Filter\Word\UnderscoreToCamelCase;
 
 use Zend\Stdlib\ArraySerializableInterface;
 
-abstract class AbstractObject implements ArraySerializableInterface
+abstract class ModelObject implements ArraySerializableInterface
 {
     private $loaded = false;
 
@@ -40,15 +40,18 @@ abstract class AbstractObject implements ArraySerializableInterface
 
         $filter = new UnderscoreToCamelCase();
 
-        foreach ($columns as $column) {
-            $name = $column->getName();
-            $methodName = 'get' . ucfirst($filter->filter($name));
+        foreach (array_keys(get_object_vars($this)) as $var) {
+            if ($var === 'loaded') {
+                continue;
+            }
+
+            $methodName = 'get' . ucfirst($filter->filter($var));
 
             if (method_exists($this, $methodName) === false) {
                 continue;
             }
 
-            $data[$name] = $this->$methodName();
+            $data[$var] = $this->$methodName();
         }
 
         return $data;

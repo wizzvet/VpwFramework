@@ -1,9 +1,9 @@
 <?php
-namespace ZfeDataTest\TestAsset;
+namespace VpwTest\Dal\Asset;
 
-use ZfeData\DataObject;
+use Vpw\Dal\ModelObject;
 
-class FooObject extends DataObject
+class FooObject extends ModelObject
 {
     protected $foo;
 
@@ -64,11 +64,8 @@ class FooObject extends DataObject
     }
 
 
-    /**
-     * (non-PHPdoc)
-     * @see \ZfeData\Mapper\DataObject::getIdentityField()
-     */
-    public function getIdentityField()
+
+    public function getIdentityKey()
     {
         return $this->getFoo();
     }

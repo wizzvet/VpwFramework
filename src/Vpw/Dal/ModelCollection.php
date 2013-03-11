@@ -1,13 +1,11 @@
 <?php
-namespace Vpw\DataSource;
-
-use Vpw\DataSource\AbstractObject;
+namespace Vpw\Dal;
 
 use Zend\Db\Adapter\Driver\ResultInterface;
 
 use Zend\Db\ResultSet\ResultSetInterface;
 
-class DataCollection implements \Iterator
+class ModelCollection implements \Iterator
 {
 
     /**
@@ -27,7 +25,7 @@ class DataCollection implements \Iterator
      *
      * @param AbstractObject $dataObjectPrototype
      */
-    public function __construct(AbstractObject $dataObjectPrototype)
+    public function __construct(ModelObject $dataObjectPrototype)
     {
         $this->dataObjectPrototype = $dataObjectPrototype;
     }

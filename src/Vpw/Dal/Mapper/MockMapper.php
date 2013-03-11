@@ -1,12 +1,11 @@
 <?php
-namespace Vpw\DataSource\Mapper;
+namespace Vpw\Dal\Mapper;
 
+use Vpw\Dal\IdentityMapInterface;
 
-use Vpw\DataSource\AbstractObject;
+use Vpw\Dal\IdentityMap;
 
-use Vpw\DataSource\IdentityMap;
-
-use Vpw\DataSource\IdentityMapInterface;
+use Vpw\Dal\ModelObject;
 
 class MockMapper implements DataMapperInterface
 {
@@ -25,9 +24,9 @@ class MockMapper implements DataMapperInterface
     }
 
     /**
-     * @param AbstractObject $object
+     * @param ModelObject $object
      */
-    public function save(AbstractObject $object)
+    public function save(ModelObject $object)
     {
         if ($this->storage->contains($object) === false) {
             $this->insert($object);
@@ -37,25 +36,25 @@ class MockMapper implements DataMapperInterface
     }
 
     /**
-     * @param AbstractObject $object
+     * @param ModelObject $object
      */
-    public function insert(AbstractObject $object)
+    public function insert(ModelObject $object)
     {
         $this->storage->add($object);
     }
 
     /**
-     * @param AbstractObject $object
+     * @param ModelObject $object
      */
-    public function update(AbstractObject $object)
+    public function update(ModelObject $object)
     {
         $this->storage->add($object);
     }
 
     /**
-     * @param AbstractObject $object
+     * @param ModelObject $object
      */
-    public function delete(AbstractObject $object)
+    public function delete(ModelObject $object)
     {
         $this->storage->remove($object);
     }

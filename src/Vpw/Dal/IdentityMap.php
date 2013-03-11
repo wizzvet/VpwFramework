@@ -1,19 +1,19 @@
 <?php
-namespace Vpw\DataSource;
+namespace Vpw\Dal;
 
 class IdentityMap extends \ArrayObject implements IdentityMapInterface
 {
-    public function add(DataObject $object)
+    public function add(ModelObject $object)
     {
         $this->offsetSet($object->getIdentityKey(), $object);
     }
 
-    public function remove(DataObject $object)
+    public function remove(ModelObject $object)
     {
         $this->offsetUnset($object->getIdentityKey());
     }
 
-    public function contains(DataObject $object)
+    public function contains(ModelObject $object)
     {
         return $this->offsetExists($object->getIdentityKey());
     }
