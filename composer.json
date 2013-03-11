@@ -9,6 +9,7 @@
     "autoload": {
         "psr-0": {
             "Vpw\\": "src/"
+            "VpwTest\\": "tests/"
         }
     }
 }
