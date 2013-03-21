@@ -1,6 +1,10 @@
 <?php
 namespace Vpw\Dal\Mapper;
 
+use Zend\Db\Sql\Where;
+
+use Zend\Db\Sql\Predicate\Operator;
+
 use Vpw\Dal\ModelCollection;
 
 use Zend\Db\Sql\Delete;
@@ -27,7 +31,7 @@ abstract class DbMapper implements DataMapperInterface
     /**
      * @var Adapter
      */
-    protected $db;
+    protected $adapter;
 
     /**
      * @var string
@@ -59,9 +63,9 @@ abstract class DbMapper implements DataMapperInterface
      * @param string $schema
      * @param string $table
      */
-    public function __construct(Adapter $db, $table)
+    public function __construct(Adapter $adapter, $table)
     {
-        $this->db = $db;
+        $this->adapter = $adapter;
         $this->table = $table;
     }
 
@@ -89,7 +93,7 @@ abstract class DbMapper implements DataMapperInterface
 
         $aiColumn = $this->getMetadata()->getAutoIncrementColumn();
         if ($aiColumn !== null) {
-            $object->exchangeArray(array($aiColumn->getName() => $this->db->getDriver()->getLastGeneratedValue()));
+            $object->exchangeArray(array($aiColumn->getName() => $this->adapter->getDriver()->getLastGeneratedValue()));
         }
 
         $object->setLoaded(true);
@@ -108,8 +112,8 @@ abstract class DbMapper implements DataMapperInterface
         $insert->columns(array_keys($this->getMetadata()->getColumns()));
         $insert->values($object->getArrayCopy());
 
-        $statement = $this->db->getDriver()->createStatement();
-        $insert->prepareStatement($this->db, $statement);
+        $statement = $this->adapter->getDriver()->createStatement();
+        $insert->prepareStatement($this->adapter, $statement);
 
         return $statement;
     }
@@ -144,8 +148,8 @@ abstract class DbMapper implements DataMapperInterface
         $update->set($data);
         $update->where($where);
 
-        $statement = $this->db->getDriver()->createStatement();
-        $update->prepareStatement($this->db, $statement);
+        $statement = $this->adapter->getDriver()->createStatement();
+        $update->prepareStatement($this->adapter, $statement);
 
         return $statement;
     }
@@ -180,8 +184,8 @@ abstract class DbMapper implements DataMapperInterface
         $delete = new Delete($this->table);
         $delete->where($where);
 
-        $statement = $this->db->getDriver()->createStatement();
-        $delete->prepareStatement($this->db, $statement);
+        $statement = $this->adapter->getDriver()->createStatement();
+        $delete->prepareStatement($this->adapter, $statement);
 
         return $statement;
     }
@@ -191,7 +195,7 @@ abstract class DbMapper implements DataMapperInterface
      *
      * @return \Vpw\Dal\Mapper\DbMetadata
      */
-    protected function getMetadata()
+    public function getMetadata()
     {
         if ($this->metadata === null) {
             $this->metadata = $this->loadMetaData();
@@ -210,16 +214,28 @@ abstract class DbMapper implements DataMapperInterface
 
     /**
      *
-     * @param unknown $where
+     * @param mixed $values values of primary key
      * @return ModelObject
      */
-    public function find($where)
+    public function find($values)
     {
-        $select = $this->getDefaultSelect();
+        $select = new Select();
+        $this->completeSelect($select);
+
+        $primaryKey = $this->getMetadata()->getPrimaryKey();
+
+        if (is_array($values) === false) {
+            $values = array_combine($primaryKey, array($values));
+        }
+
+        $where = new Where();
+        foreach ($primaryKey as $columnName) {
+            $where->equalTo($columnName, $values[$columnName]);
+        }
         $select->where($where);
 
-        $statement = $this->db->getDriver()->createStatement();
-        $select->prepareStatement($this->db, $statement);
+        $statement = $this->adapter->getDriver()->createStatement();
+        $select->prepareStatement($this->adapter, $statement);
 
         $result = $statement->execute();
 
@@ -235,25 +251,33 @@ abstract class DbMapper implements DataMapperInterface
      * @param unknown $where
      * @return ModelCollection
      */
-    public function findAll($where)
+    public function findAll(Select $select = null)
     {
-        $select = $this->getDefaultSelect();
-        $select->where($where);
+        if ($select === null) {
+            $select = new Select();
+        }
 
-        $statement = $this->db->getDriver()->createStatement();
-        $select->prepareStatement($this->db, $statement);
+        $this->completeSelect($select);
+
+        $statement = $this->adapter->getDriver()->createStatement();
+        $select->prepareStatement($this->adapter, $statement);
 
         $result = $statement->execute();
 
-        $collection = new $this->modelCollectionClassName(new $this->modelObjectClassName());
+        $collection = new $this->modelCollectionClassName($this->createModelObject());
         $collection->initialize($result);
 
         return $collection;
     }
 
 
-    public function getDefaultSelect()
+    protected function completeSelect(Select $select)
     {
-        return new Select($this->table);
+        $select->from($this->table);
+    }
+
+
+    public function createModelObject() {
+        return new $this->modelObjectClassName();
     }
 }

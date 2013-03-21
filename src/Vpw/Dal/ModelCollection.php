@@ -71,4 +71,15 @@ class ModelCollection implements \Iterator
     {
         return $this->dataSource->count();
     }
+
+    public function getArrayCopy()
+    {
+        $array = array();
+
+        foreach ($this as $data) {
+            $array[] = $data->getArrayCopy();
+        }
+
+        return $array;
+    }
 }

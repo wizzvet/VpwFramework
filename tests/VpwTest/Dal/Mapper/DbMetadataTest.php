@@ -12,8 +12,8 @@ use PHPUnit_Framework_TestCase;
 class DbMetadataTest extends PHPUnit_Framework_TestCase
 {
 
-    private $dbMetadata;
 
+    private $dbMetadata;
     public function setUp()
     {
         $fooColumn = new ColumnObject('foo', 'bar', 'buz');
@@ -46,5 +46,15 @@ class DbMetadataTest extends PHPUnit_Framework_TestCase
     public function testAiColumn()
     {
         $this->assertEquals('foo', $this->dbMetadata->getAutoIncrementColumn()->getName());
+    }
+
+
+
+
+    public function testSerialize()
+    {
+        $serializeString = serialize($this->dbMetadata);
+        $this->assertNotNull($serializeString);
+        $this->assertTrue(unserialize($serializeString) instanceof DbMetadata);
     }
 }

@@ -13,24 +13,24 @@ class ModelCollectionTest extends PHPUnit_Framework_TestCase
 {
     private $collection;
 
+    private $data = array(
+        array(
+            'foo' => 'bar',
+            'ref' => 'A',
+            'id' => null
+        ),
+
+        array(
+            'foo' => 'bar2',
+            'ref' => 'B',
+            'id' => null
+        ),
+    );
+
     public function setUp()
     {
         $this->collection = new ModelCollection(new FooObject());
-        $this->collection->initialize(
-            new MockResult(
-                array(
-                    array(
-                        'foo' => 'bar',
-                        'ref' => 'A'
-                    ),
-
-                    array(
-                        'foo' => 'bar2',
-                        'ref' => 'B'
-                    ),
-                )
-            )
-        );
+        $this->collection->initialize(new MockResult($this->data));
     }
 
 
@@ -50,5 +50,11 @@ class ModelCollectionTest extends PHPUnit_Framework_TestCase
         $o = $this->collection->current();
         $this->assertInstanceOf('\VpwTest\Dal\Asset\FooObject', $o);
         $this->assertEquals('bar2', $o->getFoo());
+    }
+
+    public function testArrayCopy()
+    {
+        $this->assertEquals($this->collection->getArrayCopy(), $this->data);
+
     }
 }

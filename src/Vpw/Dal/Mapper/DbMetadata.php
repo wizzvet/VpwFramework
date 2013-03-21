@@ -11,6 +11,8 @@
 
 namespace Vpw\Dal\Mapper;
 
+use Zend\Db\Metadata\Object\ColumnObject;
+
 use Vpw\Dal\Exception\RuntimeException;
 
 use Zend\Cache\Storage\StorageInterface;
@@ -38,6 +40,10 @@ class DbMetadata implements \Serializable
         $this->constraints = $constraints;
     }
 
+    /**
+     *
+     * @return array ColumnObject
+     */
     public function getColumns()
     {
         return $this->columns;

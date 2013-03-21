@@ -1,11 +1,25 @@
 <?php
+/**
+ * Important : Les classes héritant de cet objet devront déclarées leurs attributs
+ * en "protected", afin que la fonction get_object_vars puisse les récupérer.
+ *
+ * cf. http://www.php.net/manual/en/function.get-object-vars.php
+ *
+ *
+ * @author christophe.borsenberger@vosprojetsweb.pro
+ *
+ */
+
 namespace Vpw\Dal;
+
+use Zend\Filter\Word\CamelCaseToUnderscore;
 
 use Zend\Filter\Word\UnderscoreToCamelCase;
 
 use Zend\Stdlib\ArraySerializableInterface;
 
-abstract class ModelObject implements ArraySerializableInterface
+
+abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
 {
     private $loaded = false;
 
@@ -34,24 +48,30 @@ abstract class ModelObject implements ArraySerializableInterface
         }
     }
 
+
+    /**
+     * (non-PHPdoc)
+     * @see \Zend\Stdlib\ArraySerializableInterface::getArrayCopy()
+     */
     public function getArrayCopy()
     {
-        $data = array();
+        $filter = new CamelCaseToUnderscore();
 
-        $filter = new UnderscoreToCamelCase();
+        $data = array();
 
         foreach (array_keys(get_object_vars($this)) as $var) {
             if ($var === 'loaded') {
                 continue;
             }
 
-            $methodName = 'get' . ucfirst($filter->filter($var));
+            $key = strToLower($filter->filter($var));
+            $methodName = 'get' . ucfirst($var);
 
             if (method_exists($this, $methodName) === false) {
                 continue;
             }
 
-            $data[$var] = $this->$methodName();
+            $data[$key] = $this->$methodName();
         }
 
         return $data;
@@ -71,4 +91,39 @@ abstract class ModelObject implements ArraySerializableInterface
      * Retourne la valeur qui permet d'identifier cet objet
      */
     abstract public function getIdentityKey();
+
+
+
+    /**
+     * @param offset
+     */
+    public function offsetExists ($offset) {
+        return method_exists($this, 'get' . ucfirst($offset));
+    }
+
+    /**
+     * @param offset
+     */
+    public function offsetGet ($offset) {
+        $methodName = 'get' . ucfirst($offset);
+        return $this->$methodName();
+    }
+
+    /**
+     * @param offset
+     * @param value
+     */
+    public function offsetSet ($offset, $value) {
+        $methodName = 'set' . ucfirst($offset);
+        return $this->$methodName($value);
+    }
+
+    /**
+     * @param offset
+     */
+    public function offsetUnset ($offset) {
+        $methodName = 'set' . ucfirst($offset);
+        return $this->$methodName(null);
+    }
+
 }
