@@ -293,8 +293,6 @@ abstract class DbMapper implements MapperInterface
         $collection = $this->loadData($result, $flags);
         $collection->setTotalNbRows($totalNbRows);
 
-        $rawState = $select->getRawState();
-
         $result->getResource()->close();
 
         return $collection;
