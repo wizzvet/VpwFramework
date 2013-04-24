@@ -11,6 +11,8 @@ use Vpw\Dal\Mapper\DbMapper;
 
 class FooMapper extends DbMapper
 {
+    protected $modelObjectClassName = "VpwTest\Dal\Asset\FooObject";
+
     protected function loadMetadata()
     {
         $fooColumn = new ColumnObject('foo', 'bar', 'buz');

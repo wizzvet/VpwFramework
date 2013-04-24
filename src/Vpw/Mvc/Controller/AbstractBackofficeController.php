@@ -2,10 +2,9 @@
 
 namespace Vpw\Mvc\Controller;
 
+use Zend\Form\Form;
 
 use Zend\View\Helper\Partial;
-
-use Vpw\Dal\Mapper\DbMapper;
 
 use Vpw\Table\Column;
 
@@ -17,32 +16,45 @@ use Zend\View\Model\ViewModel;
 
 use Vpw\Form\SpecFactory;
 
-use Zend\Db\Adapter\Adapter;
-
 use Zend\Mvc\Controller\AbstractActionController;
+use Vpw\Form\Fieldset\MetadataBasedFieldset;
+use Zend\Filter\Word\UnderscoreToCamelCase;
+use Zend\Paginator\Paginator;
+use Zend\Paginator\Adapter\Null;
+use Vpw\Dal\ModelCollection;
 
 abstract class AbstractBackofficeController extends AbstractActionController
 {
     /**
-     * @var DbMapper
+     *
+     * @var UnderscoreToCamelCase
      */
-    private $mapper;
-
+    static private $filter;
 
     /**
-     * Binded model to the form
-     * @var ModelObject
+     * Lazy load
+     * @return \Zend\Filter\Word\UnderscoreToCamelCase
      */
-    private $model;
+    static private function getFilter()
+    {
+        if (self::$filter === null) {
+            self::$filter = new UnderscoreToCamelCase();
+        }
+
+        return self::$filter;
+    }
 
 
     protected $successMessages = array(
-        'add' => "L'objet a bien été ajouté.",
-        'edit' => "L'objet a bien été modifié.",
-        'delete' => "L'objet a bien été supprimé.",
+        'add' => "L'objet a bien été inséré en base de données.",
+        'edit' => "L'objet a bien été modifié en base de données.",
+        'delete' => "L'objet a bien été supprimé de la base de données.",
     );
 
-
+    /**
+     *
+     * @return \Zend\View\Model\ViewModel
+     */
     protected function createViewModel()
     {
         $viewModel = new ViewModel();
@@ -51,31 +63,62 @@ abstract class AbstractBackofficeController extends AbstractActionController
     }
 
 
+    /**
+     * (non-PHPdoc)
+     * @see \Zend\Mvc\Controller\AbstractActionController::indexAction()
+     */
     public function indexAction()
     {
+        $options = $this->getCollectionOptions();
+
+        $collection = $this->getCollection($this->getCollectionFilters(), $options);
+        $paginator = new Paginator(new Null($collection->getTotalNbRows()));
+        $paginator->setCurrentPageNumber($options['page']);
+
         $viewModel = $this->createViewModel();
-
-        $table = $this->createListTable();
-        $table->setRows($this->getListTableRows());
-
-        $viewModel->table = $table;
+        $viewModel->setVariable($this->getCollectionName(), $collection);
+        $viewModel->setVariable('collectionOptions', $options);
+        $viewModel->setVariable('paginator', $paginator);
 
         return $viewModel;
     }
 
-    public function addAction()
+    /**
+     * @return \Zend\View\Model\ViewModel
+     */
+    public function detailsAction()
     {
         $viewModel = $this->createViewModel();
+        $viewModel->setVariable($this->getModelName(), $this->getModelObject());
+        return $viewModel;
+    }
 
-        $form = $this->createForm('add');
-        $model = $this->getModel();
+    /**
+     * @return \Zend\View\Model\ViewModel
+     */
+    public function addAction()
+    {
+        return $this->editAction();
+    }
 
-        $form->bind($model);
+    /**
+     *
+     * @return \Zend\View\Model\ViewModel
+     */
+    public function editAction()
+    {
+        $viewModel = $this->createViewModel();
+        $model     = $this->getModelObject();
+        $form      = $this->createEditForm();
 
-        $viewModel->form = $form;
+        $viewModel->setVariable('form', $form);
+        $viewModel->setVariable($this->getModelName(), $model);
+
+        $this->populateEditFormWithModel($form, $model);
 
         if ($this->getRequest()->isPost() === true) {
-            $form->setData($this->getRequest()->getPost());
+
+            $form->setData($this->getRequest()->getPost($this->getFormName()));
 
             if ($form->isValid() === false) {
                 $viewModel->formMessages = $form->getMessages();
@@ -83,86 +126,39 @@ abstract class AbstractBackofficeController extends AbstractActionController
             }
 
             try {
-                $this->getMapper()->insert($model);
-                $viewModel->successMessage = $this->successMessages['add'];
+                $this->populateModelWithEditForm($form, $model);
+
+                $this->getMapper()->save($model);
+                $viewModel->successMessage = $this->successMessages[$this->getEvent()->getRouteMatch()->getParam('action')];
             } catch (\Exception $e) {
                 $viewModel->failedMessage = $e->getMessage();
             }
         }
 
-
-
         return $viewModel;
     }
-
-    public function detailsAction()
-    {
-        $viewModel = $this->createViewModel();
-
-        $id = $this->getEvent()->getRouteMatch()->getParam('id');
-
-        $viewModel->model = $this->getMapper()->find($id);
-
-        return $viewModel;
-    }
-
-    public function editAction()
-    {
-        return new ViewModel();
-    }
-
-    public function deleteAction()
-    {
-        return new ViewModel();
-    }
-
-
 
 
     /**
-     * Crée une table à partir des méta données SQL
-     * et ajoute la colonne des liens
-     *
-     * @return \Vpw\Table\Table
+     * @return \Zend\View\Model\ViewModel
      */
-    protected function createListTable()
+    public function deleteAction()
     {
-        $factory = new \Vpw\Table\Factory();
-        $table =  $factory->createTable($this->getMapper()->getMetadata());
+        $viewModel = $this->createViewModel();
+        $viewModel->setVariable($this->getModelName(), $this->getModelObject());
 
-        $colLinks = new Column('links');
-        $colLinks->setTemplate('backoffice-table-row-links');
-
-        $table->addColumn($colLinks);
-
-        return $table;
-    }
-
-
-    protected function getListTableRows()
-    {
-        $row = array();
-
-        $routeMatch = $this->getEvent()->getRouteMatch();
-        $params = $routeMatch->getParams();
-
-        foreach ($this->getMapper()->findAll() as $model) {
-            $row = $model->getArrayCopy();
-            $row['links'] = array(
-                'details_link' => $this->url()->fromRoute(
-                    $routeMatch->getMatchedRouteName,
-                    array(
-                        'controller' => $params['__CONTROLLER__'],
-                        'action' => 'details',
-                        'id' => $model->getIdentityKey()
-                    )
-                )
-            );
-
-            $rows[] = $row;
+        if ($this->getRequest()->isPost() === true) {
+            if ($this->getRequest()->getPost('confirm') !== null) {
+                try {
+                    //$this->getMapper()->delete();
+                    $viewModel->successMessage = $this->successMessages['delete'];
+                } catch (\Exception $e) {
+                    $viewModel->failedMessage = $e->getMessage();
+                }
+            }
         }
 
-        return $rows;
+        return $viewModel;
     }
 
 
@@ -170,51 +166,146 @@ abstract class AbstractBackofficeController extends AbstractActionController
      * Crée un formulaire à partir des méta données du mapper.
      * @return \Zend\Form\Form
      */
-    protected function createForm($type)
+    protected function createEditForm()
     {
-        $specFactory = new SpecFactory($this->getMapper()->getMetadata());
+        $form = new Form($this->getFormName());
+        $form->setWrapElements(true);
 
-        $factory = new \Zend\Form\Factory();
-        return $factory->createForm($specFactory->getFormSpec($type));
+        $form->setAttribute('method', 'post');
+        $form->setAttribute('class', 'form form-horizontal');
+        $form->add($this->getEditFieldset(), array('name' => 'data'));
+        return $form;
     }
 
-    /**
-     * Get the mapper used to interact with a specific storage
-     * @return \Vpw\Mvc\Controller\DbMapper
-     */
-    protected function getMapper()
-    {
-        if ($this->mapper == null) {
-            $this->mapper = $this->createMapper($this->getDbAdapter());
-        }
 
-        return $this->mapper;
-    }
-
-    protected function getDbAdapter()
+    protected function getFormName()
     {
-        return $this->getServiceLocator()->get('Db');
+        return $this->getMapper()->getTableName();
     }
 
     /**
      *
-     * @param Adapter $adapter
-     * @return DbMapper
+     * @param Form $form
+     * @param ModelObject $model
      */
-    abstract protected function createMapper(Adapter $adapter);
+    protected function populateEditFormWithModel(Form $form, ModelObject $model)
+    {
+        $form->bind($model);
+    }
+
+    /**
+     *
+     * @param Form $form
+     * @param ModelObject $model
+     */
+    protected function populateModelWithEditForm(Form $form, ModelObject $model)
+    {
+
+    }
+
+    /**
+     *
+     * @return \Vpw\Form\Fieldset\MetadataBasedFieldset
+     */
+    protected function getEditFieldset()
+    {
+        $fieldset = new MetadataBasedFieldset($this->getMapper()->getMetadata());
+        $fieldset->setUseAsBaseFieldset(true);
+        return $fieldset;
+    }
+
+    /**
+     * Get the mapper used to interact with a specific storage
+     * @return \Vpw\Dal\Mapper\MapperInterface
+     */
+    abstract protected function getMapper();
 
 
     /**
-     * Get the Model Object
-     * @return \Vpw\Dal\ModelObject
+     *
+     * @return string
      */
-    protected function getModel()
+    protected function getModelName()
     {
-        if ($this->model == null) {
-            $this->model = $this->mapper->createModelObject();
-        }
-
-        return $this->model;
+        $name = self::getFilter()->filter($this->getMapper()->getTableName());
+        $name[0] = strToLower($name[0]);
+        return $name;
     }
 
+    /**
+     *
+     * @return string
+     */
+    protected function getCollectionName()
+    {
+        return $this->getModelName() . 's';
+    }
+
+    /**
+     * @return \Vpw\Dal\ModelObject
+     */
+    protected function getModelObject()
+    {
+        $key = $this->getModelObjectKey();
+
+        if($key === null) {
+            return $this->createModelObject();
+        }
+
+        return $this->findModelObject($key);
+    }
+
+    /**
+     * Retourne une collection d'object paginé (utilsé principalement dans la méthode indexAction)
+     * @return ModelCollection
+     */
+    protected function getCollection($filters, $options)
+    {
+        return $this->getMapper()->findAll($filters, $options);
+    }
+
+    protected function getCollectionFilters()
+    {
+        return null;
+    }
+
+    protected function getCollectionOptions()
+    {
+        $request = $this->getEvent()->getRequest();
+
+        $options = array(
+            'limit' => $request->getQuery('limit', 20),
+            'page' => $request->getQuery('page', 1),
+            'order' => $request->getQuery('order', null),
+        );
+
+        $options['offset'] = $options['limit'] * ($options['page'] - 1);
+
+        return $options;
+    }
+
+
+    /**
+     * @return string
+     */
+    protected function getModelObjectKey()
+    {
+        return $this->getEvent()->getRouteMatch()->getParam('id', null);
+    }
+
+    /**
+     * @return \Vpw\Dal\ModelObject
+     */
+    protected function createModelObject()
+    {
+        return $this->getMapper()->createModelObject();
+    }
+
+    /**
+     * @return \Vpw\Dal\ModelObject
+     */
+    protected function findModelObject($key)
+    {
+        return $this->getMapper()->find($key);
+    }
 }

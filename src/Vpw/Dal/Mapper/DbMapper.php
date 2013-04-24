@@ -1,9 +1,11 @@
 <?php
 namespace Vpw\Dal\Mapper;
 
-use Zend\Db\Sql\Where;
+use Zend\Db\Adapter\ParameterContainer;
 
-use Zend\Db\Sql\Predicate\Operator;
+use Zend\Db\Sql\PreparableSqlInterface;
+
+use Zend\Db\Sql\Where;
 
 use Vpw\Dal\ModelCollection;
 
@@ -15,17 +17,14 @@ use Zend\Db\Sql\Insert;
 
 use Vpw\Dal\Mapper\DbMetadata;
 
-use Vpw\Dal\Exception\RuntimeException;
-
 use Zend\Db\Sql\Select;
 
 use Zend\Db\Sql\Update;
 
 use Zend\Db\Adapter\Adapter;
+use Vpw\Dal\Exception\RuntimeException;
 
-use Zend\Db\Adapter\ParameterContainer;
-
-abstract class DbMapper implements DataMapperInterface
+abstract class DbMapper implements MapperInterface
 {
 
     /**
@@ -50,12 +49,24 @@ abstract class DbMapper implements DataMapperInterface
      */
     private $modelObjectPrototype;
 
-
+    /**
+     *
+     * @var string
+     */
     protected $modelObjectClassName = "Vpw\Dal\ModelObject";
 
-
+    /**
+     *
+     * @var string
+     */
     protected $modelCollectionClassName = "Vpw\Dal\ModelCollection";
 
+
+    /**
+     * Map of all model object loaded by this mapper
+     * @var array
+     */
+    protected $loadedMap = array();
 
     /**
      *
@@ -71,7 +82,7 @@ abstract class DbMapper implements DataMapperInterface
 
     /**
      * (non-PHPdoc)
-     * @see \Vpw\Dal\Mapper\DataMapperInterface::save()
+     * @see \Vpw\Dal\Mapper\MapperInterface::save()
      */
     public function save(ModelObject $object)
     {
@@ -84,7 +95,7 @@ abstract class DbMapper implements DataMapperInterface
 
     /**
      * (non-PHPdoc)
-     * @see \Vpw\Dal\Mapper\DataMapperInterface::insert()
+     * @see \Vpw\Dal\Mapper\MapperInterface::insert()
      */
     public function insert(ModelObject $object)
     {
@@ -104,23 +115,19 @@ abstract class DbMapper implements DataMapperInterface
 
     /**
      * @param ModelObject $object
-     * @return \Driver\StatementInterface
+     * @return \Zend\Db\Adapter\Driver\StatementInterface
      */
     public function getInsertStatement(ModelObject $object)
     {
         $insert = new Insert($this->table);
-        $insert->columns(array_keys($this->getMetadata()->getColumns()));
         $insert->values($object->getArrayCopy());
 
-        $statement = $this->adapter->getDriver()->createStatement();
-        $insert->prepareStatement($this->adapter, $statement);
-
-        return $statement;
+        return $this->createStatement($insert);
     }
 
     /**
      * (non-PHPdoc)
-     * @see \Vpw\Dal\Mapper\DataMapperInterface::update()
+     * @see \Vpw\Dal\Mapper\MapperInterface::update()
      */
     public function update(ModelObject $object)
     {
@@ -148,20 +155,18 @@ abstract class DbMapper implements DataMapperInterface
         $update->set($data);
         $update->where($where);
 
-        $statement = $this->adapter->getDriver()->createStatement();
-        $update->prepareStatement($this->adapter, $statement);
-
-        return $statement;
+        return $this->createStatement($update);
     }
 
     /**
      * (non-PHPdoc)
-     * @see \Vpw\Dal\Mapper\DataMapperInterface::delete()
+     * @see \Vpw\Dal\Mapper\MapperInterface::delete()
      */
     public function delete(ModelObject $object)
     {
         if ($object->isLoaded() === true) {
             $result = $this->getDeleteStatement($object)->execute();
+            $object->setLoaded(false);
             return $result->getAffectedRows();
         }
     }
@@ -184,8 +189,45 @@ abstract class DbMapper implements DataMapperInterface
         $delete = new Delete($this->table);
         $delete->where($where);
 
+        return $this->createStatement($delete);
+    }
+
+
+    /**
+     * Create a statement based on an SQL object + set type hinting
+     *
+     * @param PreparableSqlInterface $sql
+     * @return \Zend\Db\Adapter\Driver\StatementInterface
+     */
+    protected function createStatement(PreparableSqlInterface $sql)
+    {
         $statement = $this->adapter->getDriver()->createStatement();
-        $delete->prepareStatement($this->adapter, $statement);
+        $sql->prepareStatement($this->adapter, $statement);
+
+        $parameterContainer = $statement->getParameterContainer();
+
+        $columns = $this->getMetadata()->getColumns();
+        foreach ($columns as $column) {
+            switch ($column->getDataType()) {
+                case 'tinyint':
+                case 'smallint':
+                case 'mediumint':
+                case 'int':
+                case 'bigint':
+                    $parameterContainer->offsetSetErrata($column->getName(), ParameterContainer::TYPE_INTEGER);
+                    break;
+
+                case 'float':
+                case 'double':
+                    $parameterContainer->offsetSetErrata($column->getName(), ParameterContainer::TYPE_DOUBLE);
+                    break;
+
+                default:
+                    $parameterContainer->offsetSetErrata($column->getName(), ParameterContainer::TYPE_STRING);
+                    break;
+            }
+
+        }
 
         return $statement;
     }
@@ -211,73 +253,240 @@ abstract class DbMapper implements DataMapperInterface
 
 
 
-
     /**
-     *
-     * @param mixed $values values of primary key
-     * @return ModelObject
+     * (non-PHPdoc)
+     * @see \Vpw\Dal\Mapper\MapperInterface::k()
      */
-    public function find($values)
+    public function find($key, $flags=0)
     {
-        $select = new Select();
-        $this->completeSelect($select);
+        $select = $this->createFindSelect($key, $flags);
+        $resultSet = $this->findBySelect($select);
+        $collection = $this->loadData($resultSet, $flags);
+        $resultSet->getResource()->close();
 
-        $primaryKey = $this->getMetadata()->getPrimaryKey();
+        $key = $this->getModelObjectKey($key);
 
-        if (is_array($values) === false) {
-            $values = array_combine($primaryKey, array($values));
+        if ($collection->contains($key) === false) {
+            throw new RuntimeException("No row found for the key : " . $key);
         }
 
-        $where = new Where();
-        foreach ($primaryKey as $columnName) {
-            $where->equalTo($columnName, $values[$columnName]);
-        }
-        $select->where($where);
-
-        $statement = $this->adapter->getDriver()->createStatement();
-        $select->prepareStatement($this->adapter, $statement);
-
-        $result = $statement->execute();
-
-        $object = new $this->modelObjectClassName();
-
-        $object->exchangeArray($result->current());
-
-        return $object;
+        return $collection->get($key);
     }
 
     /**
      *
-     * @param unknown $where
-     * @return ModelCollection
+     * @param string $where
+     * @param string $options
+     * @return \Vpw\Dal\ModelCollection
      */
-    public function findAll(Select $select = null)
+    public function findAll($where = null, $options = null, $flags = 0)
     {
-        if ($select === null) {
-            $select = new Select();
+        $select = $this->createFindAllSelect($where, $options, $flags);
+        $select->quantifier("SQL_CALC_FOUND_ROWS");
+
+        $result = $this->findBySelect($select);
+
+        $totalNbRowsResult = $this->adapter->getDriver()->getConnection()->execute("SELECT FOUND_ROWS() as nb");
+        $totalNbRows = $totalNbRowsResult->current()['nb'];
+        $totalNbRowsResult->getResource()->close();
+
+        $collection = $this->loadData($result, $flags);
+        $collection->setTotalNbRows($totalNbRows);
+
+        $rawState = $select->getRawState();
+
+        $result->getResource()->close();
+
+        return $collection;
+    }
+
+    /**
+     *
+     * @param mixed $key
+     * @return \Zend\Db\Sql\Select
+     */
+    protected function createFindSelect($key, $flags = 0)
+    {
+        $select = $this->createSelect($flags);
+        $select->where($this->primaryKeyToWhere($key));
+        return $select;
+    }
+
+    protected function createFindAllSelect($where = null, $options = null, $flags=0)
+    {
+        $select = $this->createSelect($flags);
+
+        if ($where !== null) {
+            $select->where($where);
         }
 
-        $this->completeSelect($select);
+        if ($options !== null) {
+            if (isset($options['limit']) === true) {
+                $select->limit($options['limit']);
+            }
 
-        $statement = $this->adapter->getDriver()->createStatement();
-        $select->prepareStatement($this->adapter, $statement);
+            if (isset($options['offset']) === true) {
+                $select->offset($options['offset']);
+            }
 
-        $result = $statement->execute();
+            if (isset($options['order']) === true) {
+                $select->order($options['order']);
+            }
+        }
 
-        $collection = new $this->modelCollectionClassName($this->createModelObject());
-        $collection->initialize($result);
+        return $select;
+    }
+
+    /**
+     *
+     * @param number $flags
+     * @return \Zend\Db\Sql\Select
+     */
+    protected function createSelect($flags = 0)
+    {
+        return new Select($this->table);
+    }
+
+
+    /**
+     *
+     * @param mixed $key
+     * @return \Zend\Db\Sql\Where
+     */
+    protected function primaryKeyToWhere($key)
+    {
+        $primaryKey = $this->getMetadata()->getPrimaryKey();
+
+        if (is_array($key) === false) {
+            $key = array_combine($primaryKey, array($key));
+        }
+
+        $where = new Where();
+        foreach ($primaryKey as $columnName) {
+            $where->equalTo($this->table.'.'.$columnName, $key[$columnName]);
+        }
+
+        return $where;
+    }
+
+    /**
+     *
+     * @param Select $select
+     * @return Zend\Db\Adapter\Driver\ResultInterface
+     */
+    public function findBySelect(Select $select)
+    {
+        return $this->createStatement($select)->execute();
+    }
+
+
+    /**
+     *
+     * @param \Iterator $resultSet
+     * @param number $flags
+     * @return ModelCollection
+     */
+    public function loadData(\Iterator $resultSet, $flags = 0)
+    {
+        $collection = new $this->modelCollectionClassName();
+
+        foreach ($resultSet as $data) {
+            $model = $this->load($data, $flags);
+            $collection->add($model);
+        }
 
         return $collection;
     }
 
 
-    protected function completeSelect(Select $select)
+    /**
+     * (non-PHPdoc)
+     * @see \Vpw\Dal\Mapper\MapperInterface::load()
+     */
+    public function load($data, $flags = 0)
     {
-        $select->from($this->table);
+        $key = $this->getModelObjectKey($data);
+
+        if (isset($this->loadedMap[$key]) === false) {
+            $this->loadedMap[$key] = $this->doLoad($data, $flags);
+        }
+
+        $this->loadCollectionModels($this->loadedMap[$key], $data, $flags);
+
+        return $this->loadedMap[$key];
+    }
+
+    /**
+     *
+     * @param unknown $data
+     * @return \Vpw\Dal\ModelObject
+     */
+    protected function doLoad($data, $flags = 0)
+    {
+        $prototype = $this->createModelObject();
+        $object = clone $prototype;
+        $object->load($data);
+        $object->setFlags($flags);
+        return  $object;
     }
 
 
-    public function createModelObject() {
-        return new $this->modelObjectClassName();
+    /**
+     *
+     * @param unknown $model
+     * @param array $data
+     * @param number $flags
+     */
+    protected function loadCollectionModels(ModelObject $model, $data, $flags = 0)
+    {
+        //Par défault, on ne fait rien
+    }
+
+    /**
+     * For performance reason, we clone a prototype
+     * @return \Vpw\Dal\ModelObject
+     */
+    public function createModelObject()
+    {
+        return clone $this->getModelObjectPrototype();
+    }
+
+    /**
+     *
+     * @return \Vpw\Dal\ModelObject
+     */
+    private function getModelObjectPrototype()
+    {
+        if ($this->modelObjectPrototype === null) {
+            $this->modelObjectPrototype = new $this->modelObjectClassName();
+        }
+
+        return $this->modelObjectPrototype;
+    }
+
+    /**
+     *
+     * @param array|\ArrayAccess|string $data
+     */
+    private function getModelObjectKey($data)
+    {
+        if (is_scalar($data) === true) {
+            return strval($data);
+        }
+
+        $key = '';
+        foreach ($this->getMetadata()->getPrimaryKey() as $name) {
+            if (isset($data[$name]) === false) {
+                throw new RuntimeException("Unable to find the primary-key field : $name, for the table : " . $this->table);
+            }
+            $key .= $data[$name] . '-';
+        }
+
+        return substr($key, 0, -1);
+    }
+
+    public function getTableName()
+    {
+        return $this->table;
     }
 }

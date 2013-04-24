@@ -3,6 +3,9 @@
  * Important : Les classes héritant de cet objet devront déclarées leurs attributs
  * en "protected", afin que la fonction get_object_vars puisse les récupérer.
  *
+ * Si on attribut de la classe ne doit pas être exporter, il suffit de le mettre en private
+ * Par exemple : les objets issus des clé étrangères
+ *
  * cf. http://www.php.net/manual/en/function.get-object-vars.php
  *
  *
@@ -21,7 +24,41 @@ use Zend\Stdlib\ArraySerializableInterface;
 
 abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
 {
+    /**
+     *
+     * @var UnderscoreToCamelCase
+     */
+    static private $filter;
+
+    /**
+     * Lazy load
+     * @return \Zend\Filter\Word\UnderscoreToCamelCase
+     */
+    static private function getFilter()
+    {
+        if (self::$filter === null) {
+            self::$filter = new UnderscoreToCamelCase();
+        }
+
+        return self::$filter;
+    }
+
+
+    /**
+     * Flag indiquant si l'objet a été chargé à partir de la base de données
+     * @var unknown
+     */
     private $loaded = false;
+
+    /**
+     * Flags to know what has been loaded is this model object
+     *
+     * !Important : laisser en protected pour que ca passe dans la serialization
+     *
+     * @var number
+     */
+    protected $flags = 0;
+
 
     public function __construct(array $data = null)
     {
@@ -30,15 +67,28 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
         }
     }
 
+    /**
+     * Retourne la valeur qui permet d'identifier cet objet
+     */
+    abstract public function getIdentityKey();
+
+    /**
+     *
+     * @param array $data
+     */
     public function load(array $data)
     {
         $this->exchangeArray($data);
         $this->setLoaded(true);
     }
 
+    /**
+     * (non-PHPdoc)
+     * @see \Zend\Stdlib\ArraySerializableInterface::exchangeArray()
+     */
     public function exchangeArray(array $data)
     {
-        $filter = new UnderscoreToCamelCase();
+        $filter = self::getFilter();
 
         foreach ($data as $name => $value) {
             $methodName = 'set' . ucfirst($filter->filter($name));
@@ -64,13 +114,12 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
                 continue;
             }
 
-            $key = strToLower($filter->filter($var));
             $methodName = 'get' . ucfirst($var);
-
             if (method_exists($this, $methodName) === false) {
                 continue;
             }
 
+            $key = strToLower($filter->filter($var));
             $data[$key] = $this->$methodName();
         }
 
@@ -87,25 +136,28 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
         $this->loaded = (bool)$loaded;
     }
 
-    /**
-     * Retourne la valeur qui permet d'identifier cet objet
-     */
-    abstract public function getIdentityKey();
+    public function setFlags($flags)
+    {
+        $this->flags = $flags;
+    }
 
-
+    public function hashFlag($flag)
+    {
+        return ($flag & $this->flags === $flag);
+    }
 
     /**
      * @param offset
      */
     public function offsetExists ($offset) {
-        return method_exists($this, 'get' . ucfirst($offset));
+        return method_exists($this, 'get' . ucfirst(self::getFilter()->filter($offset)));
     }
 
     /**
      * @param offset
      */
     public function offsetGet ($offset) {
-        $methodName = 'get' . ucfirst($offset);
+        $methodName = 'get' . ucfirst(self::getFilter()->filter($offset));
         return $this->$methodName();
     }
 
@@ -114,7 +166,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
      * @param value
      */
     public function offsetSet ($offset, $value) {
-        $methodName = 'set' . ucfirst($offset);
+        $methodName = 'set' . ucfirst(self::getFilter()->filter($offset));
         return $this->$methodName($value);
     }
 
@@ -122,8 +174,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
      * @param offset
      */
     public function offsetUnset ($offset) {
-        $methodName = 'set' . ucfirst($offset);
+        $methodName = 'set' . ucfirst(self::getFilter()->filter($offset));
         return $this->$methodName(null);
     }
-
 }

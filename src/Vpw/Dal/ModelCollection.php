@@ -1,83 +1,186 @@
 <?php
 namespace Vpw\Dal;
 
-use Zend\Db\Adapter\Driver\ResultInterface;
+use Zend\Stdlib\ArraySerializableInterface;
 
-use Zend\Db\ResultSet\ResultSetInterface;
-
-class ModelCollection implements \Iterator
+class ModelCollection implements \Iterator, \Countable, ArraySerializableInterface
 {
 
     /**
-     * @var AbstractObject
+     * @var array
      */
-    private $dataObjectPrototype;
-
+    private $storage = array();
 
     /**
-     * @var \Iterator
+     * @var int
      */
-    private $dataSource;
-
+    private $totalNbRows = 0;
 
     /**
-     * http://ralphschindler.com/2012/03/09/php-constructor-best-practices-and-the-prototype-pattern
      *
-     * @param AbstractObject $dataObjectPrototype
+     * @param array $objects
      */
-    public function __construct(ModelObject $dataObjectPrototype)
+    public function __construct(array $objects = array())
     {
-        $this->dataObjectPrototype = $dataObjectPrototype;
+        $this->exchangeArray($objects);
+    }
+
+    /**
+     *
+     * @return number
+     */
+    public function getTotalNbRows()
+    {
+        return $this->totalNbRows;
+    }
+
+    /**
+     * @param int $totalNbRows
+     */
+    public function setTotalNbRows($totalNbRows)
+    {
+        $this->totalNbRows = intval($totalNbRows);
     }
 
 
-    public function initialize($dataSource)
+    /**
+     *
+     * @param ModelObject $object
+     */
+    public function add(ModelObject $object)
     {
-        if (($dataSource instanceof \Iterator) === false) {
-            throw new \BadMethodCallException("The datasource is not an Iterator object");
+        $key = $object->getIdentityKey();
+
+        if (isset($storage[$key]) === false) {
+            $this->storage[$key] = $object;
         }
-        $this->dataSource = $dataSource;
     }
 
-    public function rewind()
+    /**
+     *
+     * @param string|ModelObject $key
+     */
+    public function remove($key)
     {
-        $this->dataSource->rewind();
+        if ($key instanceof ModelObject) {
+            $key = $key->getIdentityKey();
+        }
+
+        if (isset($this->storage[$key]) === false) {
+            return null;
+        }
+
+        $object = $this->storage[$key];
+        unset($this->storage[$key]);
+        return $object;
     }
 
-    public function current()
+    /**
+     *
+     * @param string $key
+     */
+    public function get($key)
     {
-        $data = $this->dataSource->current();
-        $o = clone $this->dataObjectPrototype;
-        $o->exchangeArray($data);
-        return $o;
+        return isset($this->storage[$key]) ? $this->storage[$key] : null;
     }
 
-    public function key()
+    /**
+     *
+     * @param string|ModelObject $key
+     */
+    public function contains($key)
     {
-        return $this->dataSource->key();
+        if ($key instanceof ModelObject) {
+            $key = $key->getIdentityKey();
+        }
+
+        return isset($this->storage[$key]);
     }
 
-    public function next()
+
+
+    /**
+     *
+     */
+    public function clear()
     {
-        $this->dataSource->next();
+        $this->storage = array();
     }
 
-    public function valid()
+    /**
+     * (non-PHPdoc)
+     * @see Iterator::current()
+     */
+    public function current ()
     {
-        return $this->dataSource->valid();
+        return current($this->storage);
     }
 
-    public function count()
+    /**
+     * (non-PHPdoc)
+     * @see Iterator::next()
+     */
+    public function next ()
     {
-        return $this->dataSource->count();
+        next($this->storage);
     }
+
+	/**
+	 * (non-PHPdoc)
+	 * @see Iterator::key()
+	 */
+	public function key ()
+	{
+        return key($this->storage);
+	}
+
+	/**
+	 * (non-PHPdoc)
+	 * @see Iterator::valid()
+	 */
+	public function valid ()
+	{
+        return key($this->storage) !== null;
+	}
+
+	/**
+	 * (non-PHPdoc)
+	 * @see Iterator::rewind()
+	 */
+	public function rewind ()
+	{
+        reset($this->storage);
+	}
+
+	/**
+	 * (non-PHPdoc)
+	 * @see Countable::count()
+	 */
+	public function count()
+	{
+        return count($this->storage);
+	}
+
+	/**
+	 *
+	 * (non-PHPdoc)
+	 * @see \Zend\Stdlib\ArraySerializableInterface::exchangeArray()
+	 */
+    public function exchangeArray(array $objects)
+    {
+        $this->clear();
+        foreach ($objects as $object) {
+            $this->add($object);
+        }
+    }
+
 
     public function getArrayCopy()
     {
         $array = array();
 
-        foreach ($this as $data) {
-            $array[] = $data->getArrayCopy();
+        foreach ($this->storage as $object) {
+            $array[] = $object->getArrayCopy();
         }
 
         return $array;

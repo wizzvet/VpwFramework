@@ -6,6 +6,6 @@ namespace Vpw\Dal\Exception;
  * @package    Zend_Authentication
  * @subpackage Adapter
  */
-class RuntimeException extends \RuntimeException
+class RuntimeException extends \RuntimeException implements ExceptionInterface
 {
 }

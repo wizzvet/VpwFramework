@@ -17,7 +17,7 @@ use Vpw\Dal\Exception\RuntimeException;
 
 use Zend\Cache\Storage\StorageInterface;
 
-class DbMetadata implements \Serializable
+class DbMetadata implements MetadataInterface
 {
 
     /**
