@@ -20,7 +20,7 @@ interface MetadataInterface extends \Serializable
     public function getColumns();
 
     /**
-     * @param string $name
+     * @param  string            $name
      * @return null|ColumnObject
      */
     public function getColumn($name);
@@ -29,7 +29,6 @@ interface MetadataInterface extends \Serializable
      * @return List of ConstraintObject objects
      */
     public function getConstraints();
-
 
     /**
      * @return null|array Array of column name
@@ -40,5 +39,4 @@ interface MetadataInterface extends \Serializable
      * @return null|ColumnObject Auto increment column
      */
     public function getAutoIncrementColumn();
-
 }

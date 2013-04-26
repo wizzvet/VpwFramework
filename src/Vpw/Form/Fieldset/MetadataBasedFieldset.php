@@ -1,5 +1,6 @@
 <?php
 namespace Vpw\Form\Fieldset;
+
 /**
  *
  * @author christophe.borsenberger@vosprojetsweb.pro
@@ -12,7 +13,6 @@ use Zend\Form\Fieldset;
 use Vpw\Dal\Mapper\MetadataInterface;
 use Zend\InputFilter\InputFilterProviderInterface;
 use Zend\Db\Metadata\Object\ColumnObject;
-
 
 class MetadataBasedFieldset extends Fieldset implements InputFilterProviderInterface
 {
@@ -47,7 +47,7 @@ class MetadataBasedFieldset extends Fieldset implements InputFilterProviderInter
 
     /**
      *
-     * @param ColumnObject $column
+     * @param  ColumnObject $column
      * @return array
      */
     private function getElementSpec(ColumnObject $column)
@@ -67,7 +67,7 @@ class MetadataBasedFieldset extends Fieldset implements InputFilterProviderInter
             )
         );
 
-        switch($column->getDataType()) {
+        switch ($column->getDataType()) {
             case 'tinyint':
             case 'smallint':
             case 'bigint':
@@ -75,7 +75,6 @@ class MetadataBasedFieldset extends Fieldset implements InputFilterProviderInter
                 $spec['type'] = 'Zend\Form\Element\Number';
                 $spec['attributes']['class'] = 'input-medium';
                 break;
-
             default:
             case 'varchar':
                 $spec['type'] = 'Zend\Form\Element\Text';
@@ -90,7 +89,6 @@ class MetadataBasedFieldset extends Fieldset implements InputFilterProviderInter
                     $spec['attributes']['class'] = 'input-xxlarge';
                 }
                 break;
-
             case 'text':
             case 'blob':
                 $spec['type'] = 'Zend\Form\Element\TextArea';
@@ -103,8 +101,8 @@ class MetadataBasedFieldset extends Fieldset implements InputFilterProviderInter
 
     /**
      *
-     * @param ColumnObject $column
-     * @return array array of spec
+     * @param  ColumnObject $column
+     * @return array        array of spec
      */
     private function getElementFilterSpec(ColumnObject $column)
     {

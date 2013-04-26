@@ -9,7 +9,6 @@ namespace Vpw\Form\View\Helper;
 use Zend\Form\View\Helper\FormRow as ZendFormRow;
 use Zend\Form\ElementInterface;
 
-
 class FormRow extends ZendFormRow
 {
 
@@ -30,7 +29,6 @@ class FormRow extends ZendFormRow
      */
     protected $controlWrapper = '<div class="controls" id="controls-%s">%s%s%s</div>';
 
-
     protected function getElementDescriptionHelper()
     {
         if ($this->elementDescriptionHelper) {
@@ -43,7 +41,6 @@ class FormRow extends ZendFormRow
 
         return $this->elementDescriptionHelper;
     }
-
 
     public function render(ElementInterface $element)
     {
@@ -80,18 +77,20 @@ class FormRow extends ZendFormRow
 
             if (null !== ($translator = $labelHelper->getTranslator())) {
                 $label = $translator->translate(
-                        $label, $labelHelper->getTranslatorTextDomain()
+                    $label,
+                    $labelHelper->getTranslatorTextDomain()
                 );
             }
 
             if ($type !== 'multi_checkbox' && $type !== 'radio') {
                 $labelClass = 'control-label';
 
-                $labelMarkup = $labelHelper->openTag(array(
-                    'for' => $id,
-                    'class' => $labelClass,
-                ));
-
+                $labelMarkup = $labelHelper->openTag(
+                    array(
+                        'for' => $id,
+                        'class' => $labelClass,
+                    )
+                );
 
                 // todo allow for not escaping the label
                 $labelMarkup .= $escapeHtmlHelper($label);
@@ -99,21 +98,22 @@ class FormRow extends ZendFormRow
             }
         }
 
-        $markup = sprintf($this->controlWrapper,
-                $id,
-                $elementString,
-                $elementDescription,
-                $elementErrors
+        $markup = sprintf(
+            $this->controlWrapper,
+            $id,
+            $elementString,
+            $elementDescription,
+            $elementErrors
         );
 
         $markup = sprintf($this->groupWrapper, $addtClass, $id, $labelMarkup, $markup);
 
-
         if ($type === 'multi_checkbox' || $type === 'radio') {
             $markup = sprintf(
-                    '<fieldset><legend>%s</legend>%s</fieldset>',
-                    $label,
-                    $markup);
+                '<fieldset><legend>%s</legend>%s</fieldset>',
+                $label,
+                $markup
+            );
         }
 
         return $markup;

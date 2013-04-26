@@ -14,6 +14,7 @@ class Mysqli extends \Zend\Db\Adapter\Driver\Mysqli\Mysqli
     {
         $statement = parent::createStatement($sqlOrResource);
         $statement->setConnection($this->getConnection());
+
         return $statement;
     }
 }

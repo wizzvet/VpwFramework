@@ -15,8 +15,6 @@ use Zend\Db\Metadata\Object\ColumnObject;
 
 use Vpw\Dal\Exception\RuntimeException;
 
-use Zend\Cache\Storage\StorageInterface;
-
 class DbMetadata implements MetadataInterface
 {
 
@@ -31,8 +29,6 @@ class DbMetadata implements MetadataInterface
      * @var array
      */
     private $constraints;
-
-
 
     public function __construct(array $columns, array $constraints)
     {

@@ -21,6 +21,7 @@ class Connection extends \Zend\Db\Adapter\Driver\Mysqli\Connection implements Ev
             )
         );
         $this->events = $events;
+
         return $this;
     }
 
@@ -29,6 +30,7 @@ class Connection extends \Zend\Db\Adapter\Driver\Mysqli\Connection implements Ev
         if (null === $this->events) {
             $this->setEventManager(new EventManager());
         }
+
         return $this->events;
     }
 
@@ -45,12 +47,12 @@ class Connection extends \Zend\Db\Adapter\Driver\Mysqli\Connection implements Ev
         return null;
     }
 
-
     public function execute($sql)
     {
         $this->preExecute($sql);
         $res = parent::execute($sql);
         $this->postExecute($sql, $res);
+
         return $res;
     }
 

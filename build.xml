@@ -171,4 +171,12 @@
             <arg path="${basedir}/build/code-browser" />
         </exec>
     </target>
+	
+	<target name="phpcsfixer" description="Run php-cs-fixer">
+        <exec executable="php-cs-fixer">
+            <arg value="--verbose"/>
+            <arg value="fix"/>
+            <arg path="${basedir}/src"/>
+        </exec>
+    </target>
 </project>

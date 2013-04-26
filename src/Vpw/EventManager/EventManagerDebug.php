@@ -89,7 +89,6 @@ class EventManagerDebug extends \Zend\EventManager\EventManager
         return $responses;
     }
 
-
     private function printCallback($callback)
     {
         if (is_string($callback)) {

@@ -8,7 +8,6 @@ namespace Vpw\Dal\Mapper;
 
 use Vpw\Dal\ModelObject;
 
-
 interface MapperInterface
 {
     public function save(ModelObject $object);
@@ -23,5 +22,5 @@ interface MapperInterface
 
     public function find($key, $flags = 0);
 
-    public function findAll($criteria, $options=null, $flags = 0);
+    public function findAll($criteria, $options = null, $flags = 0);
 }

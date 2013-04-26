@@ -44,5 +44,4 @@ class Form extends FormHelper
 
         return $formContent;
     }
-
 }

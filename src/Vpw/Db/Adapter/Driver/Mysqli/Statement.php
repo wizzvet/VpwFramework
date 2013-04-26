@@ -7,8 +7,6 @@ use Zend\EventManager\EventManagerAwareInterface;
 
 use Zend\EventManager\EventManager;
 
-use Zend\EventManager\EventsCapableInterface;
-
 class Statement extends \Zend\Db\Adapter\Driver\Mysqli\Statement implements EventManagerAwareInterface
 {
 
@@ -36,6 +34,7 @@ class Statement extends \Zend\Db\Adapter\Driver\Mysqli\Statement implements Even
             )
         );
         $this->events = $events;
+
         return $this;
     }
 

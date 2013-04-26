@@ -41,11 +41,13 @@ class ModelCollectionTest extends PHPUnit_Framework_TestCase
     {
         $this->object0 = new FooObject($this->data[0]);
         $this->object1 = new FooObject($this->data[1]);
-        $this->object2 = new FooObject(array(
+        $this->object2 = new FooObject(
+            array(
                 'foo' => 'bar3',
                 'ref' => 'C',
                 'id' => null
-        ));
+            )
+        );
 
         $this->collection = new ModelCollection();
         $this->collection->add($this->object0);

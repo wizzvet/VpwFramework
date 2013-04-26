@@ -61,7 +61,6 @@ abstract class DbMapper implements MapperInterface
      */
     protected $modelCollectionClassName = "Vpw\Dal\ModelCollection";
 
-
     /**
      * Map of all model object loaded by this mapper
      * @var array
@@ -71,8 +70,8 @@ abstract class DbMapper implements MapperInterface
     /**
      *
      * @param Adapter $db
-     * @param string $schema
-     * @param string $table
+     * @param string  $schema
+     * @param string  $table
      */
     public function __construct(Adapter $adapter, $table)
     {
@@ -112,9 +111,8 @@ abstract class DbMapper implements MapperInterface
         return $result->getAffectedRows();
     }
 
-
     /**
-     * @param ModelObject $object
+     * @param  ModelObject                                $object
      * @return \Zend\Db\Adapter\Driver\StatementInterface
      */
     public function getInsertStatement(ModelObject $object)
@@ -132,12 +130,12 @@ abstract class DbMapper implements MapperInterface
     public function update(ModelObject $object)
     {
         $result = $this->getUpdateStatement($object)->execute();
+
         return $result->getAffectedRows();
     }
 
-
     /**
-     * @param ModelObject $object
+     * @param  ModelObject                $object
      * @return \Driver\StatementInterface
      */
     public function getUpdateStatement(ModelObject $object)
@@ -167,13 +165,13 @@ abstract class DbMapper implements MapperInterface
         if ($object->isLoaded() === true) {
             $result = $this->getDeleteStatement($object)->execute();
             $object->setLoaded(false);
+
             return $result->getAffectedRows();
         }
     }
 
-
     /**
-     * @param ModelObject $object
+     * @param  ModelObject                $object
      * @return \Driver\StatementInterface
      */
     public function getDeleteStatement(ModelObject $object)
@@ -192,11 +190,10 @@ abstract class DbMapper implements MapperInterface
         return $this->createStatement($delete);
     }
 
-
     /**
      * Create a statement based on an SQL object + set type hinting
      *
-     * @param PreparableSqlInterface $sql
+     * @param  PreparableSqlInterface                     $sql
      * @return \Zend\Db\Adapter\Driver\StatementInterface
      */
     protected function createStatement(PreparableSqlInterface $sql)
@@ -216,12 +213,10 @@ abstract class DbMapper implements MapperInterface
                 case 'bigint':
                     $parameterContainer->offsetSetErrata($column->getName(), ParameterContainer::TYPE_INTEGER);
                     break;
-
                 case 'float':
                 case 'double':
                     $parameterContainer->offsetSetErrata($column->getName(), ParameterContainer::TYPE_DOUBLE);
                     break;
-
                 default:
                     $parameterContainer->offsetSetErrata($column->getName(), ParameterContainer::TYPE_STRING);
                     break;
@@ -231,7 +226,6 @@ abstract class DbMapper implements MapperInterface
 
         return $statement;
     }
-
 
     /**
      *
@@ -251,13 +245,11 @@ abstract class DbMapper implements MapperInterface
      */
     abstract protected function loadMetadata();
 
-
-
     /**
      * (non-PHPdoc)
      * @see \Vpw\Dal\Mapper\MapperInterface::k()
      */
-    public function find($key, $flags=0)
+    public function find($key, $flags = 0)
     {
         $select = $this->createFindSelect($key, $flags);
         $resultSet = $this->findBySelect($select);
@@ -275,8 +267,8 @@ abstract class DbMapper implements MapperInterface
 
     /**
      *
-     * @param string $where
-     * @param string $options
+     * @param  string                   $where
+     * @param  string                   $options
      * @return \Vpw\Dal\ModelCollection
      */
     public function findAll($where = null, $options = null, $flags = 0)
@@ -300,17 +292,18 @@ abstract class DbMapper implements MapperInterface
 
     /**
      *
-     * @param mixed $key
+     * @param  mixed               $key
      * @return \Zend\Db\Sql\Select
      */
     protected function createFindSelect($key, $flags = 0)
     {
         $select = $this->createSelect($flags);
         $select->where($this->primaryKeyToWhere($key));
+
         return $select;
     }
 
-    protected function createFindAllSelect($where = null, $options = null, $flags=0)
+    protected function createFindAllSelect($where = null, $options = null, $flags = 0)
     {
         $select = $this->createSelect($flags);
 
@@ -337,7 +330,7 @@ abstract class DbMapper implements MapperInterface
 
     /**
      *
-     * @param number $flags
+     * @param  number              $flags
      * @return \Zend\Db\Sql\Select
      */
     protected function createSelect($flags = 0)
@@ -345,10 +338,9 @@ abstract class DbMapper implements MapperInterface
         return new Select($this->table);
     }
 
-
     /**
      *
-     * @param mixed $key
+     * @param  mixed              $key
      * @return \Zend\Db\Sql\Where
      */
     protected function primaryKeyToWhere($key)
@@ -369,7 +361,7 @@ abstract class DbMapper implements MapperInterface
 
     /**
      *
-     * @param Select $select
+     * @param  Select                                 $select
      * @return Zend\Db\Adapter\Driver\ResultInterface
      */
     public function findBySelect(Select $select)
@@ -377,11 +369,10 @@ abstract class DbMapper implements MapperInterface
         return $this->createStatement($select)->execute();
     }
 
-
     /**
      *
-     * @param \Iterator $resultSet
-     * @param number $flags
+     * @param  \Iterator       $resultSet
+     * @param  number          $flags
      * @return ModelCollection
      */
     public function loadData(\Iterator $resultSet, $flags = 0)
@@ -395,7 +386,6 @@ abstract class DbMapper implements MapperInterface
 
         return $collection;
     }
-
 
     /**
      * (non-PHPdoc)
@@ -416,7 +406,7 @@ abstract class DbMapper implements MapperInterface
 
     /**
      *
-     * @param unknown $data
+     * @param  unknown              $data
      * @return \Vpw\Dal\ModelObject
      */
     protected function doLoad($data, $flags = 0)
@@ -425,15 +415,15 @@ abstract class DbMapper implements MapperInterface
         $object = clone $prototype;
         $object->load($data);
         $object->setFlags($flags);
+
         return  $object;
     }
-
 
     /**
      *
      * @param unknown $model
-     * @param array $data
-     * @param number $flags
+     * @param array   $data
+     * @param number  $flags
      */
     protected function loadCollectionModels(ModelObject $model, $data, $flags = 0)
     {
@@ -475,7 +465,9 @@ abstract class DbMapper implements MapperInterface
         $key = '';
         foreach ($this->getMetadata()->getPrimaryKey() as $name) {
             if (isset($data[$name]) === false) {
-                throw new RuntimeException("Unable to find the primary-key field : $name, for the table : " . $this->table);
+                throw new RuntimeException(
+                    "Unable to find the primary-key field : $name in the data '".var_export($data, true)."'"
+                );
             }
             $key .= $data[$name] . '-';
         }

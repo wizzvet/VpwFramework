@@ -42,7 +42,6 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
         $this->totalNbRows = intval($totalNbRows);
     }
 
-
     /**
      *
      * @param ModelObject $object
@@ -72,6 +71,7 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
 
         $object = $this->storage[$key];
         unset($this->storage[$key]);
+
         return $object;
     }
 
@@ -96,8 +96,6 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
 
         return isset($this->storage[$key]);
     }
-
-
 
     /**
      *
@@ -125,47 +123,47 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
         next($this->storage);
     }
 
-	/**
-	 * (non-PHPdoc)
-	 * @see Iterator::key()
-	 */
-	public function key ()
-	{
+    /**
+     * (non-PHPdoc)
+     * @see Iterator::key()
+     */
+    public function key ()
+    {
         return key($this->storage);
-	}
+    }
 
-	/**
-	 * (non-PHPdoc)
-	 * @see Iterator::valid()
-	 */
-	public function valid ()
-	{
+    /**
+     * (non-PHPdoc)
+     * @see Iterator::valid()
+     */
+    public function valid ()
+    {
         return key($this->storage) !== null;
-	}
+    }
 
-	/**
-	 * (non-PHPdoc)
-	 * @see Iterator::rewind()
-	 */
-	public function rewind ()
-	{
+    /**
+     * (non-PHPdoc)
+     * @see Iterator::rewind()
+     */
+    public function rewind ()
+    {
         reset($this->storage);
-	}
+    }
 
-	/**
-	 * (non-PHPdoc)
-	 * @see Countable::count()
-	 */
-	public function count()
-	{
+    /**
+     * (non-PHPdoc)
+     * @see Countable::count()
+     */
+    public function count()
+    {
         return count($this->storage);
-	}
+    }
 
-	/**
-	 *
-	 * (non-PHPdoc)
-	 * @see \Zend\Stdlib\ArraySerializableInterface::exchangeArray()
-	 */
+    /**
+     *
+     * (non-PHPdoc)
+     * @see \Zend\Stdlib\ArraySerializableInterface::exchangeArray()
+     */
     public function exchangeArray(array $objects)
     {
         $this->clear();
@@ -173,7 +171,6 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
             $this->add($object);
         }
     }
-
 
     public function getArrayCopy()
     {

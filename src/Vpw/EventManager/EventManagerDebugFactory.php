@@ -26,6 +26,7 @@ class EventManagerDebugFactory implements FactoryInterface
     {
         $em = new EventManagerDebug();
         $em->setSharedManager($serviceLocator->get('SharedEventManager'));
+
         return $em;
     }
 }

@@ -13,7 +13,6 @@ use Zend\Db\Adapter\Adapter;
 class MysqlMetadata extends \Zend\Db\Metadata\Source\MysqlMetadata
 {
 
-
     protected function loadColumnData($table, $schema)
     {
         if (isset($this->data['columns'][$schema][$table])) {
@@ -69,11 +68,17 @@ class MysqlMetadata extends \Zend\Db\Metadata\Source\MysqlMetadata
             $erratas = array();
             $erratas['auto_increment'] = (strpos($row['EXTRA'], 'auto_increment') !== false);
 
-
             $matches = array();
             if (preg_match('/^(?:enum|set)\((.+)\)$/i', $row['COLUMN_TYPE'], $matches)) {
                 $permittedValues = $matches[1];
-                if (preg_match_all("/\\s*'((?:[^']++|'')*+)'\\s*(?:,|\$)/", $permittedValues, $matches, PREG_PATTERN_ORDER)) {
+                if (
+                    preg_match_all(
+                        "/\\s*'((?:[^']++|'')*+)'\\s*(?:,|\$)/",
+                        $permittedValues,
+                        $matches,
+                        PREG_PATTERN_ORDER
+                    )
+                ) {
                     $permittedValues = str_replace("''", "'", $matches[1]);
                 } else {
                     $permittedValues = array($permittedValues);

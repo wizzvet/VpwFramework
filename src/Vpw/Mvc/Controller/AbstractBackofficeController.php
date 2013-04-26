@@ -4,23 +4,14 @@ namespace Vpw\Mvc\Controller;
 
 use Zend\Form\Form;
 
-use Zend\View\Helper\Partial;
-
-use Vpw\Table\Column;
-
-use Vpw\Table\Table;
-
 use Vpw\Dal\ModelObject;
 
 use Zend\View\Model\ViewModel;
-
-use Vpw\Form\SpecFactory;
 
 use Zend\Mvc\Controller\AbstractActionController;
 use Vpw\Form\Fieldset\MetadataBasedFieldset;
 use Zend\Filter\Word\UnderscoreToCamelCase;
 use Zend\Paginator\Paginator;
-use Zend\Paginator\Adapter\Null;
 use Vpw\Dal\ModelCollection;
 
 abstract class AbstractBackofficeController extends AbstractActionController
@@ -29,13 +20,13 @@ abstract class AbstractBackofficeController extends AbstractActionController
      *
      * @var UnderscoreToCamelCase
      */
-    static private $filter;
+    private static $filter;
 
     /**
      * Lazy load
      * @return \Zend\Filter\Word\UnderscoreToCamelCase
      */
-    static private function getFilter()
+    private static function getFilter()
     {
         if (self::$filter === null) {
             self::$filter = new UnderscoreToCamelCase();
@@ -43,7 +34,6 @@ abstract class AbstractBackofficeController extends AbstractActionController
 
         return self::$filter;
     }
-
 
     protected $successMessages = array(
         'add' => "L'objet a bien été inséré en base de données.",
@@ -59,9 +49,9 @@ abstract class AbstractBackofficeController extends AbstractActionController
     {
         $viewModel = new ViewModel();
         $viewModel->setTerminal($this->getRequest()->isXmlHttpRequest());
+
         return $viewModel;
     }
-
 
     /**
      * (non-PHPdoc)
@@ -72,7 +62,7 @@ abstract class AbstractBackofficeController extends AbstractActionController
         $options = $this->getCollectionOptions();
 
         $collection = $this->getCollection($this->getCollectionFilters(), $options);
-        $paginator = new Paginator(new Null($collection->getTotalNbRows()));
+        $paginator = new Paginator(new \Zend\Paginator\Adapter\Null($collection->getTotalNbRows()));
         $paginator->setCurrentPageNumber($options['page']);
 
         $viewModel = $this->createViewModel();
@@ -90,6 +80,7 @@ abstract class AbstractBackofficeController extends AbstractActionController
     {
         $viewModel = $this->createViewModel();
         $viewModel->setVariable($this->getModelName(), $this->getModelObject());
+
         return $viewModel;
     }
 
@@ -122,6 +113,7 @@ abstract class AbstractBackofficeController extends AbstractActionController
 
             if ($form->isValid() === false) {
                 $viewModel->formMessages = $form->getMessages();
+
                 return $viewModel;
             }
 
@@ -129,7 +121,9 @@ abstract class AbstractBackofficeController extends AbstractActionController
                 $this->populateModelWithEditForm($form, $model);
 
                 $this->getMapper()->save($model);
-                $viewModel->successMessage = $this->successMessages[$this->getEvent()->getRouteMatch()->getParam('action')];
+                $viewModel->successMessage = $this->successMessages[
+                    $this->getEvent()->getRouteMatch()->getParam('action')
+                ];
             } catch (\Exception $e) {
                 $viewModel->failedMessage = $e->getMessage();
             }
@@ -137,7 +131,6 @@ abstract class AbstractBackofficeController extends AbstractActionController
 
         return $viewModel;
     }
-
 
     /**
      * @return \Zend\View\Model\ViewModel
@@ -161,7 +154,6 @@ abstract class AbstractBackofficeController extends AbstractActionController
         return $viewModel;
     }
 
-
     /**
      * Crée un formulaire à partir des méta données du mapper.
      * @return \Zend\Form\Form
@@ -174,9 +166,9 @@ abstract class AbstractBackofficeController extends AbstractActionController
         $form->setAttribute('method', 'post');
         $form->setAttribute('class', 'form form-horizontal');
         $form->add($this->getEditFieldset(), array('name' => 'data'));
+
         return $form;
     }
-
 
     protected function getFormName()
     {
@@ -185,7 +177,7 @@ abstract class AbstractBackofficeController extends AbstractActionController
 
     /**
      *
-     * @param Form $form
+     * @param Form        $form
      * @param ModelObject $model
      */
     protected function populateEditFormWithModel(Form $form, ModelObject $model)
@@ -195,7 +187,7 @@ abstract class AbstractBackofficeController extends AbstractActionController
 
     /**
      *
-     * @param Form $form
+     * @param Form        $form
      * @param ModelObject $model
      */
     protected function populateModelWithEditForm(Form $form, ModelObject $model)
@@ -211,6 +203,7 @@ abstract class AbstractBackofficeController extends AbstractActionController
     {
         $fieldset = new MetadataBasedFieldset($this->getMapper()->getMetadata());
         $fieldset->setUseAsBaseFieldset(true);
+
         return $fieldset;
     }
 
@@ -220,7 +213,6 @@ abstract class AbstractBackofficeController extends AbstractActionController
      */
     abstract protected function getMapper();
 
-
     /**
      *
      * @return string
@@ -229,6 +221,7 @@ abstract class AbstractBackofficeController extends AbstractActionController
     {
         $name = self::getFilter()->filter($this->getMapper()->getTableName());
         $name[0] = strToLower($name[0]);
+
         return $name;
     }
 
@@ -248,7 +241,7 @@ abstract class AbstractBackofficeController extends AbstractActionController
     {
         $key = $this->getModelObjectKey();
 
-        if($key === null) {
+        if ($key === null) {
             return $this->createModelObject();
         }
 

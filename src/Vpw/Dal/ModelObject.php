@@ -21,20 +21,19 @@ use Zend\Filter\Word\UnderscoreToCamelCase;
 
 use Zend\Stdlib\ArraySerializableInterface;
 
-
 abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
 {
     /**
      *
      * @var UnderscoreToCamelCase
      */
-    static private $filter;
+    private static $filter;
 
     /**
      * Lazy load
      * @return \Zend\Filter\Word\UnderscoreToCamelCase
      */
-    static private function getFilter()
+    private static function getFilter()
     {
         if (self::$filter === null) {
             self::$filter = new UnderscoreToCamelCase();
@@ -42,7 +41,6 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
 
         return self::$filter;
     }
-
 
     /**
      * Flag indiquant si l'objet a été chargé à partir de la base de données
@@ -98,7 +96,6 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
         }
     }
 
-
     /**
      * (non-PHPdoc)
      * @see \Zend\Stdlib\ArraySerializableInterface::getArrayCopy()
@@ -133,7 +130,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
 
     public function setLoaded($loaded)
     {
-        $this->loaded = (bool)$loaded;
+        $this->loaded = (bool) $loaded;
     }
 
     public function setFlags($flags)
@@ -149,15 +146,18 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
     /**
      * @param offset
      */
-    public function offsetExists ($offset) {
+    public function offsetExists ($offset)
+    {
         return method_exists($this, 'get' . ucfirst(self::getFilter()->filter($offset)));
     }
 
     /**
      * @param offset
      */
-    public function offsetGet ($offset) {
+    public function offsetGet ($offset)
+    {
         $methodName = 'get' . ucfirst(self::getFilter()->filter($offset));
+
         return $this->$methodName();
     }
 
@@ -165,16 +165,20 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
      * @param offset
      * @param value
      */
-    public function offsetSet ($offset, $value) {
+    public function offsetSet ($offset, $value)
+    {
         $methodName = 'set' . ucfirst(self::getFilter()->filter($offset));
+
         return $this->$methodName($value);
     }
 
     /**
      * @param offset
      */
-    public function offsetUnset ($offset) {
+    public function offsetUnset ($offset)
+    {
         $methodName = 'set' . ucfirst(self::getFilter()->filter($offset));
+
         return $this->$methodName(null);
     }
 }
