@@ -23,6 +23,7 @@ use Zend\Db\Sql\Update;
 
 use Zend\Db\Adapter\Adapter;
 use Vpw\Dal\Exception\RuntimeException;
+use Vpw\Dal\Exception\NoRowFoundException;
 
 abstract class DbMapper implements MapperInterface
 {
@@ -251,18 +252,26 @@ abstract class DbMapper implements MapperInterface
      */
     public function find($key, $flags = 0)
     {
-        $select = $this->createFindSelect($key, $flags);
-        $resultSet = $this->findBySelect($select);
+        return $this->findOne(
+            $this->primaryKeyToWhere($key),
+            $flags
+        );
+    }
+
+    protected function findOne($where, $flags = 0)
+    {
+        $select = $this->createSelect($flags);
+        $select->where($where);
+
+        $resultSet = $this->createStatement($select)->execute();
         $collection = $this->loadData($resultSet, $flags);
         $resultSet->getResource()->close();
 
-        $key = $this->getModelObjectKey($key);
-
-        if ($collection->contains($key) === false) {
-            throw new RuntimeException("No row found for the key : " . $key);
+        if ($collection->count() === 0) {
+            throw new NoRowFoundException("No row found");
         }
 
-        return $collection->get($key);
+        return $collection->current();
     }
 
     /**
@@ -276,7 +285,7 @@ abstract class DbMapper implements MapperInterface
         $select = $this->createFindAllSelect($where, $options, $flags);
         $select->quantifier("SQL_CALC_FOUND_ROWS");
 
-        $result = $this->findBySelect($select);
+        $result = $this->createStatement($select)->execute();
 
         $totalNbRowsResult = $this->adapter->getDriver()->getConnection()->execute("SELECT FOUND_ROWS() as nb");
         $totalNbRows = $totalNbRowsResult->current()['nb'];
@@ -290,18 +299,6 @@ abstract class DbMapper implements MapperInterface
         return $collection;
     }
 
-    /**
-     *
-     * @param  mixed               $key
-     * @return \Zend\Db\Sql\Select
-     */
-    protected function createFindSelect($key, $flags = 0)
-    {
-        $select = $this->createSelect($flags);
-        $select->where($this->primaryKeyToWhere($key));
-
-        return $select;
-    }
 
     protected function createFindAllSelect($where = null, $options = null, $flags = 0)
     {
@@ -357,16 +354,6 @@ abstract class DbMapper implements MapperInterface
         }
 
         return $where;
-    }
-
-    /**
-     *
-     * @param  Select                                 $select
-     * @return Zend\Db\Adapter\Driver\ResultInterface
-     */
-    public function findBySelect(Select $select)
-    {
-        return $this->createStatement($select)->execute();
     }
 
     /**
