@@ -91,7 +91,7 @@ class MetadataBasedFieldset extends Fieldset implements InputFilterProviderInter
                 break;
             case 'text':
             case 'blob':
-                $spec['type'] = 'Zend\Form\Element\TextArea';
+                $spec['type'] = 'Zend\Form\Element\Textarea';
                 $spec['attributes']['class'] = 'input-xxlarge';
                 break;
         }
