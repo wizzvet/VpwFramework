@@ -252,17 +252,26 @@ abstract class DbMapper implements MapperInterface
      */
     public function find($key, $flags = 0)
     {
+        $cacheKey = $this->getModelObjectKey($key);
+
+        if (isset($this->loadedMap[$cacheKey]) === true) {
+            return $this->loadedMap[$cacheKey];
+        }
+
         return $this->findOne(
             $this->primaryKeyToWhere($key),
             $flags
         );
     }
 
-    protected function findOne($where, $flags = 0)
+    protected function findOne($where, $options = null, $flags = 0)
     {
-        $select = $this->createSelect($flags);
-        $select->where($where);
+        if (is_array($options) === false) {
+            $flags = intval($options);
+            $options = array();
+        }
 
+        $select = $this->createSelect($where, $options, $flags);
         $resultSet = $this->createStatement($select)->execute();
         $collection = $this->loadData($resultSet, $flags);
         $resultSet->getResource()->close();
@@ -282,7 +291,12 @@ abstract class DbMapper implements MapperInterface
      */
     public function findAll($where = null, $options = null, $flags = 0)
     {
-        $select = $this->createFindAllSelect($where, $options, $flags);
+        if (is_array($options) === false) {
+            $flags = intval($options);
+            $options = array();
+        }
+
+        $select = $this->createSelect($where, $options, $flags);
         $select->quantifier("SQL_CALC_FOUND_ROWS");
 
         $result = $this->createStatement($select)->execute();
@@ -300,40 +314,36 @@ abstract class DbMapper implements MapperInterface
     }
 
 
-    protected function createFindAllSelect($where = null, $options = null, $flags = 0)
+    /**
+     *
+     * @param string $where
+     * @param string $options
+     * @param number $flags
+     * @return \Zend\Db\Sql\Select
+     */
+    protected function createSelect($where = null, array $options = array(), $flags = 0)
     {
-        $select = $this->createSelect($flags);
+        $select = new Select($this->table);
 
         if ($where !== null) {
             $select->where($where);
         }
 
-        if ($options !== null) {
-            if (isset($options['limit']) === true) {
-                $select->limit($options['limit']);
-            }
+        if (isset($options['limit']) === true) {
+            $select->limit($options['limit']);
+        }
 
-            if (isset($options['offset']) === true) {
-                $select->offset($options['offset']);
-            }
+        if (isset($options['offset']) === true) {
+            $select->offset($options['offset']);
+        }
 
-            if (isset($options['order']) === true) {
-                $select->order($options['order']);
-            }
+        if (isset($options['order']) === true) {
+            $select->order($options['order']);
         }
 
         return $select;
     }
 
-    /**
-     *
-     * @param  number              $flags
-     * @return \Zend\Db\Sql\Select
-     */
-    protected function createSelect($flags = 0)
-    {
-        return new Select($this->table);
-    }
 
     /**
      *

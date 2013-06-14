@@ -111,7 +111,8 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
      */
     public function current ()
     {
-        return current($this->storage);
+        $current = current($this->storage);
+        return ($current === false) ? null : $current;
     }
 
     /**
