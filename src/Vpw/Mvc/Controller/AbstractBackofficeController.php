@@ -61,8 +61,9 @@ abstract class AbstractBackofficeController extends AbstractActionController
     {
         $options = $this->getCollectionOptions();
 
-        $collection = $this->getCollection($this->getCollectionFilters(), $options);
+        $collection = $this->findCollection($options);
         $paginator = new Paginator(new \Zend\Paginator\Adapter\Null($collection->getTotalNbRows()));
+        $paginator->setItemCountPerPage($options['limit']);
         $paginator->setCurrentPageNumber($options['page']);
 
         $viewModel = $this->createViewModel();
@@ -252,14 +253,9 @@ abstract class AbstractBackofficeController extends AbstractActionController
      * Retourne une collection d'object paginé (utilsé principalement dans la méthode indexAction)
      * @return ModelCollection
      */
-    protected function getCollection($filters, $options)
+    protected function findCollection($options)
     {
-        return $this->getMapper()->findAll($filters, $options);
-    }
-
-    protected function getCollectionFilters()
-    {
-        return null;
+        return $this->getMapper()->findAll(null, $options);
     }
 
     protected function getCollectionOptions()
@@ -267,7 +263,7 @@ abstract class AbstractBackofficeController extends AbstractActionController
         $request = $this->getEvent()->getRequest();
 
         $options = array(
-            'limit' => $request->getQuery('limit', 20),
+            'limit' => $request->getQuery('limit', 30),
             'page' => $request->getQuery('page', 1),
             'order' => $request->getQuery('order', null),
         );
