@@ -16,10 +16,8 @@
 namespace Vpw\Dal;
 
 use Zend\Filter\Word\CamelCaseToUnderscore;
-
-use Zend\Filter\Word\UnderscoreToCamelCase;
-
 use Zend\Stdlib\ArraySerializableInterface;
+use Vpw\Filter\Word\UnderscoreToCamelCase;
 
 abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
 {
