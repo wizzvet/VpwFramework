@@ -291,22 +291,32 @@ abstract class DbMapper implements MapperInterface
      */
     public function findAll($where = null, $options = null, $flags = 0)
     {
-        if (is_array($options) === false) {
+        if (func_num_args() < 3 && is_array($options) === false) {
             $flags = intval($options);
             $options = array();
         }
 
         $select = $this->createSelect($where, $options, $flags);
-        $select->quantifier("SQL_CALC_FOUND_ROWS");
+
+        $hasLimit = $select->getRawState(Select::LIMIT) !== null;
+
+        if ($hasLimit === true) {
+            $select->quantifier("SQL_CALC_FOUND_ROWS");
+        }
 
         $result = $this->createStatement($select)->execute();
 
-        $totalNbRowsResult = $this->adapter->getDriver()->getConnection()->execute("SELECT FOUND_ROWS() as nb");
-        $totalNbRows = $totalNbRowsResult->current()['nb'];
-        $totalNbRowsResult->getResource()->close();
+        if ($hasLimit === true) {
+            $totalNbRowsResult = $this->adapter->getDriver()->getConnection()->execute("SELECT FOUND_ROWS() as nb");
+            $totalNbRows = $totalNbRowsResult->current()['nb'];
+            $totalNbRowsResult->getResource()->close();
+        }
 
         $collection = $this->loadData($result, $flags);
-        $collection->setTotalNbRows($totalNbRows);
+
+        if ($hasLimit === true) {
+            $collection->setTotalNbRows($totalNbRows);
+        }
 
         $result->getResource()->close();
 
@@ -396,8 +406,6 @@ abstract class DbMapper implements MapperInterface
             $this->loadedMap[$key] = $this->doLoad($data, $flags);
         }
 
-        $this->loadCollectionModels($this->loadedMap[$key], $data, $flags);
-
         return $this->loadedMap[$key];
     }
 
@@ -416,16 +424,6 @@ abstract class DbMapper implements MapperInterface
         return  $object;
     }
 
-    /**
-     *
-     * @param unknown $model
-     * @param array   $data
-     * @param number  $flags
-     */
-    protected function loadCollectionModels(ModelObject $model, $data, $flags = 0)
-    {
-        //Par défault, on ne fait rien
-    }
 
     /**
      * For performance reason, we clone a prototype
