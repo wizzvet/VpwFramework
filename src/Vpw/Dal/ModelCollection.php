@@ -25,8 +25,15 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
         $this->exchangeArray($objects);
     }
 
+
+    public function isEmpty()
+    {
+        return count($this->storage) === 0;
+    }
+
     /**
-     *
+     * Returns the total number of rows available, not in the collection, but in globaly
+     * Useful for pagination, by example
      * @return number
      */
     public function getTotalNbRows()
