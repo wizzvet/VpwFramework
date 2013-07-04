@@ -398,7 +398,7 @@ abstract class DbMapper implements MapperInterface
      * (non-PHPdoc)
      * @see \Vpw\Dal\Mapper\MapperInterface::load()
      */
-    public function load($data, $flags = 0)
+    final public function load($data, $flags = 0)
     {
         $key = $this->getModelObjectKey($data);
 
@@ -416,8 +416,7 @@ abstract class DbMapper implements MapperInterface
      */
     protected function doLoad($data, $flags = 0)
     {
-        $prototype = $this->createModelObject();
-        $object = clone $prototype;
+        $object = $this->createModelObject();
         $object->load($data);
         $object->setFlags($flags);
 
