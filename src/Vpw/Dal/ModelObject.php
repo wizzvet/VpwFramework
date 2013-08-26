@@ -15,9 +15,9 @@
 
 namespace Vpw\Dal;
 
-use Zend\Filter\Word\CamelCaseToUnderscore;
 use Zend\Stdlib\ArraySerializableInterface;
-use Vpw\Filter\Word\UnderscoreToCamelCase;
+use Vpw\Filter\Word\Ascii\UnderscoreToCamelCase;
+use Zend\Filter\Word\CamelCaseToUnderscore;
 
 abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
 {
@@ -87,7 +87,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
         $filter = self::getFilter();
 
         foreach ($data as $name => $value) {
-            $methodName = 'set' . ucfirst($filter->filter($name));
+            $methodName = 'set' . $filter->filter($name, true);
             if (method_exists($this, $methodName) === true) {
                 $this->$methodName($value);
             }
@@ -146,7 +146,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
      */
     public function offsetExists ($offset)
     {
-        return method_exists($this, 'get' . ucfirst(self::getFilter()->filter($offset)));
+        return method_exists($this, 'get' . self::getFilter()->filter($offset, true));
     }
 
     /**
@@ -154,7 +154,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
      */
     public function offsetGet ($offset)
     {
-        $methodName = 'get' . ucfirst(self::getFilter()->filter($offset));
+        $methodName = 'get' . self::getFilter()->filter($offset, true);
 
         return $this->$methodName();
     }
@@ -165,7 +165,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
      */
     public function offsetSet ($offset, $value)
     {
-        $methodName = 'set' . ucfirst(self::getFilter()->filter($offset));
+        $methodName = 'set' . self::getFilter()->filter($offset, true);
 
         return $this->$methodName($value);
     }
@@ -175,7 +175,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
      */
     public function offsetUnset ($offset)
     {
-        $methodName = 'set' . ucfirst(self::getFilter()->filter($offset));
+        $methodName = 'set' . self::getFilter()->filter($offset, true);
 
         return $this->$methodName(null);
     }

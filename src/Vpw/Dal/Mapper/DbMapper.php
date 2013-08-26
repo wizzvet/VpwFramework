@@ -398,7 +398,7 @@ abstract class DbMapper implements MapperInterface
      * (non-PHPdoc)
      * @see \Vpw\Dal\Mapper\MapperInterface::load()
      */
-    final public function load($data, $flags = 0)
+    public function load($data, $flags = 0)
     {
         $key = $this->getModelObjectKey($data);
 
