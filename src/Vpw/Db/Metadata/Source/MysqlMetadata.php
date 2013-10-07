@@ -1,7 +1,7 @@
 <?php
 /**
  * Mysql meta data source avec une fonctionnalité en plus que celle du ZF2 :
- *  - Indique via le champ "erratas", si une colonne à la flag "AUTO_INCREMENT"
+ *  - Indique via le champ "erratas", si une colonne à le flag "AUTO_INCREMENT"
  *
  * @author christophe.borsenberger@vosprojetsweb.pro
  */
