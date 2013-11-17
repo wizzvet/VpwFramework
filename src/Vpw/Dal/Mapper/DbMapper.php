@@ -113,13 +113,16 @@ abstract class DbMapper implements MapperInterface
     }
 
     /**
+     *
+     * On
+     *
      * @param  ModelObject                                $object
      * @return \Zend\Db\Adapter\Driver\StatementInterface
      */
     public function getInsertStatement(ModelObject $object)
     {
         $insert = new Insert($this->table);
-        $insert->values($object->getArrayCopy());
+        $insert->values($this->extractValues($object));
 
         return $this->createStatement($insert);
     }
@@ -141,20 +144,30 @@ abstract class DbMapper implements MapperInterface
      */
     public function getUpdateStatement(ModelObject $object)
     {
-        $data = $object->getArrayCopy();
         $pkColumnsName = $this->getMetadata()->getPrimaryKey();
+        $values = $this->extractValues($object);
 
         $where = array();
         foreach ($pkColumnsName as $name) {
             $where[$name] = $data[$name];
-            unset($data[$name]);
+            unset($values[$name]);
         }
 
         $update = new Update($this->table);
-        $update->set($data);
+        $update->set($values);
         $update->where($where);
 
         return $this->createStatement($update);
+    }
+
+
+    private function extractValues(ModelObject $object)
+    {
+        $values = array();
+        foreach (array_keys($this->getMetadata()->getColumns()) as $key) {
+            $values[$key] = $object->offsetGet($key);
+        }
+        return $values;
     }
 
     /**

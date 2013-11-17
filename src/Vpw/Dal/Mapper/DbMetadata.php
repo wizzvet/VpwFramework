@@ -73,7 +73,7 @@ class DbMetadata implements MetadataInterface
     public function getAutoIncrementColumn()
     {
         foreach ($this->columns as $column) {
-            if ($column->getErrata('auto_increment') !== null) {
+            if ($column->getErrata('auto_increment') !== false) {
                 return $column;
             }
         }
