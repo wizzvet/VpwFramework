@@ -50,15 +50,15 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
     }
 
     /**
+     * On n'utiliser pas l' "identity key" comme index, car elle peut est être nulle, pour les objects nouvellement
+     * créés
      *
      * @param ModelObject $object
      */
     public function add(ModelObject $object)
     {
-        $key = $object->getIdentityKey();
-
-        if (isset($storage[$key]) === false) {
-            $this->storage[$key] = $object;
+        if ($this->contains($object) === false) {
+            $this->storage[] = $object;
         }
     }
 
@@ -72,14 +72,18 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
             $key = $key->getIdentityKey();
         }
 
-        if (isset($this->storage[$key]) === false) {
+        if ($key === null) {
             return null;
         }
 
-        $object = $this->storage[$key];
-        unset($this->storage[$key]);
+        foreach ($this->storage as $index => $object) {
+            if ($object->getIdentityKey() === $key) {
+                unset($this->storage[$index]);
+                return $object;
+            }
+        }
 
-        return $object;
+        return null;
     }
 
     /**
@@ -88,7 +92,13 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
      */
     public function get($key)
     {
-        return isset($this->storage[$key]) ? $this->storage[$key] : null;
+        foreach ($this->storage as $object) {
+            if ($object->getIdentityKey() === $key) {
+                return $object;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -101,7 +111,17 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
             $key = $key->getIdentityKey();
         }
 
-        return isset($this->storage[$key]);
+        if ($key === null) {
+            return false;
+        }
+
+        foreach ($this->storage as $object) {
+            if ($object->getIdentityKey() === $key) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

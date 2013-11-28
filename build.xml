@@ -156,6 +156,7 @@
     >
         <exec
             executable="phpunit"
+        	dir="tests"
             failonerror="true" />
     </target>
     <target

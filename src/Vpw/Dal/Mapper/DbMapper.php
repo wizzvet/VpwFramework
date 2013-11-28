@@ -81,6 +81,14 @@ abstract class DbMapper implements MapperInterface
     }
 
     /**
+     * @return \Zend\Db\Adapter\Adapter
+     */
+    public function getAdapter()
+    {
+        return $this->adapter;
+    }
+
+    /**
      * (non-PHPdoc)
      * @see \Vpw\Dal\Mapper\MapperInterface::save()
      */

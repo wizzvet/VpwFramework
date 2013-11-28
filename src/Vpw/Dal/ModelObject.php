@@ -18,14 +18,25 @@ namespace Vpw\Dal;
 use Zend\Stdlib\ArraySerializableInterface;
 use Vpw\Filter\Word\Ascii\UnderscoreToCamelCase;
 use Zend\Filter\Word\CamelCaseToUnderscore;
+use Zend\Stdlib\Hydrator\HydratorAwareInterface;
+use Zend\Stdlib\Hydrator\ClassMethods;
+use Zend\Stdlib\Hydrator\HydratorInterface;
+use Zend\Stdlib\Hydrator\Filter\MethodMatchFilter;
+use Zend\Stdlib\Hydrator\Filter\FilterComposite;
 
-abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
+abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, HydratorAwareInterface
 {
     /**
      *
      * @var UnderscoreToCamelCase
      */
     private static $filter;
+
+
+    /**
+     * @var ClassMethods
+     */
+    protected static $defaultHydrator;
 
     /**
      * Lazy load
@@ -39,6 +50,21 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
 
         return self::$filter;
     }
+
+    protected static function getDefaultHydrator()
+    {
+        if (self::$defaultHydrator === null) {
+            self::$defaultHydrator = new ClassMethods();
+            self::$defaultHydrator->addFilter('getHydrator', new MethodMatchFilter('getHydrator'), FilterComposite::CONDITION_AND);
+            self::$defaultHydrator->addFilter('getArrayCopy', new MethodMatchFilter('getArrayCopy') , FilterComposite::CONDITION_AND);
+            self::$defaultHydrator->addFilter('isLoaded', new MethodMatchFilter('isLoaded') , FilterComposite::CONDITION_AND);
+            self::$defaultHydrator->addFilter('getIdentityKey', new MethodMatchFilter('getIdentityKey') , FilterComposite::CONDITION_AND);
+            self::$defaultHydrator->addFilter('getIdentity', new MethodMatchFilter('getIdentity') , FilterComposite::CONDITION_AND);
+        }
+
+        return self::$defaultHydrator;
+    }
+
 
     /**
      * Flag indiquant si l'objet a été chargé à partir de la base de données
@@ -56,6 +82,12 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
     protected $flags = 0;
 
 
+    /**
+     *
+     * @var HydratorInterface
+     */
+    private $hydrator;
+
     public function __construct(array $data = null)
     {
         if ($data !== null) {
@@ -64,9 +96,37 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
     }
 
     /**
-     * Retourne la valeur qui permet d'identifier cet objet
+     * Retourne une clé qui permet d'identifier cet objet
      */
-    abstract public function getIdentityKey();
+    final public function getIdentityKey()
+    {
+        $identity = $this->getIdentity();
+
+        if ($identity === null) {
+            return null;
+        }
+
+        if (is_array($identity) == false) {
+            return $identity;
+        }
+
+        $key = '';
+        foreach ($identity as $val) {
+            if ($val === null) {
+                return null;
+            }
+
+            $key .= $val . '-';
+        }
+
+        return substr($key, 0, -1);
+    }
+
+    /**
+     * @return mixed
+     */
+    abstract public function getIdentity();
+
 
     /**
      *
@@ -105,7 +165,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
         $data = array();
 
         foreach (array_keys(get_object_vars($this)) as $var) {
-            if ($var === 'loaded') {
+            if ($var === 'loaded' || $var === 'hydrator') {
                 continue;
             }
 
@@ -178,5 +238,28 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess
         $methodName = 'set' . self::getFilter()->filter($offset, true);
 
         return $this->$methodName(null);
+    }
+
+
+    /**
+     * (non-PHPdoc)
+     * @see \Zend\Stdlib\Hydrator\HydratorAwareInterface::getHydrator()
+     */
+    public function getHydrator()
+    {
+        if ($this->hydrator === null) {
+            $this->hydrator = static::getDefaultHydrator();
+        }
+
+        return $this->hydrator;
+    }
+
+    /**
+     * (non-PHPdoc)
+     * @see \Zend\Stdlib\Hydrator\HydratorAwareInterface::setHydrator()
+     */
+    public function setHydrator(HydratorInterface $hydrator)
+    {
+        $this->hydrator = $hydrator;
     }
 }

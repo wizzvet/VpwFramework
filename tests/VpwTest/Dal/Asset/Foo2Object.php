@@ -3,7 +3,7 @@ namespace VpwTest\Dal\Asset;
 
 use Vpw\Dal\ModelObject;
 
-class FooObject extends ModelObject
+class Foo2Object extends ModelObject
 {
     protected $foo;
 
@@ -65,6 +65,6 @@ class FooObject extends ModelObject
 
     public function getIdentity()
     {
-        return $this->getFoo();
+        return array($this->getFoo(), $this->getRef());
     }
 }

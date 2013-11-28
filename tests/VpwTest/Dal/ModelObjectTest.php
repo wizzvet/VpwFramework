@@ -4,6 +4,7 @@ namespace VpwTest\Dal;
 use VpwTest\Dal\Asset\FooObject;
 
 use PHPUnit_Framework_TestCase;
+use VpwTest\Dal\Asset\Foo2Object;
 
 class ModelObjectTest extends PHPUnit_Framework_TestCase
 {
@@ -36,5 +37,40 @@ class ModelObjectTest extends PHPUnit_Framework_TestCase
         $foo = new FooObject($data);
         $copy = $foo->getArrayCopy();
         $this->assertEquals($data, $copy);
+    }
+
+    public function testHydrator()
+    {
+        $data = array('foo'=>'bar', 'ref' => null, 'id' => null);
+        $foo = new FooObject($data);
+        $this->assertInstanceOf('\Zend\Stdlib\Hydrator\ClassMethods', $foo->getHydrator());
+    }
+
+    public function testScalarIdentity()
+    {
+        $data = array('foo'=>'bar', 'ref' => null, 'id' => null);
+        $foo = new FooObject($data);
+        $this->assertEquals($foo->getIdentity(), $data['foo']);
+    }
+
+    public function testScalarIdentityKey()
+    {
+        $data = array('foo'=>'bar', 'ref' => null, 'id' => null);
+        $foo = new FooObject($data);
+        $this->assertEquals($foo->getIdentityKey(), $data['foo']);
+    }
+
+    public function testArrayIdentityKeyWithNullPart()
+    {
+        $data = array('foo'=>'bar', 'ref' => null, 'id' => null);
+        $foo = new Foo2Object($data);
+        $this->assertNull($foo->getIdentityKey());
+    }
+
+    public function testArrayIdentityKey()
+    {
+        $data = array('foo'=>'foo', 'ref' => 'bar', 'id' => null);
+        $foo = new Foo2Object($data);
+        $this->assertEquals('foo-bar', $foo->getIdentityKey());
     }
 }
