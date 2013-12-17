@@ -2,27 +2,17 @@
 namespace Vpw\Dal\Mapper;
 
 use Zend\Db\Adapter\ParameterContainer;
-
 use Zend\Db\Sql\PreparableSqlInterface;
-
 use Zend\Db\Sql\Where;
-
 use Vpw\Dal\ModelCollection;
-
 use Zend\Db\Sql\Delete;
-
 use Vpw\Dal\ModelObject;
-
 use Zend\Db\Sql\Insert;
-
 use Vpw\Dal\Mapper\DbMetadata;
-
 use Zend\Db\Sql\Select;
-
 use Zend\Db\Sql\Update;
-
 use Zend\Db\Adapter\Adapter;
-use Vpw\Dal\Exception\RuntimeException;
+use Vpw\Dal\Exception\BadPrimaryKeyException;
 use Vpw\Dal\Exception\NoRowFoundException;
 
 abstract class DbMapper implements MapperInterface
@@ -157,7 +147,7 @@ abstract class DbMapper implements MapperInterface
 
         $where = array();
         foreach ($pkColumnsName as $name) {
-            $where[$name] = $data[$name];
+            $where[$name] = $values[$name];
             unset($values[$name]);
         }
 
@@ -437,7 +427,7 @@ abstract class DbMapper implements MapperInterface
      */
     protected function doLoad($data, $flags = 0)
     {
-        $object = $this->createModelObject();
+        $object = $this->createModelObject($data);
         $object->load($data);
         $object->setFlags($flags);
 
@@ -449,7 +439,7 @@ abstract class DbMapper implements MapperInterface
      * For performance reason, we clone a prototype
      * @return \Vpw\Dal\ModelObject
      */
-    public function createModelObject()
+    public function createModelObject($data)
     {
         return clone $this->getModelObjectPrototype();
     }
@@ -480,7 +470,7 @@ abstract class DbMapper implements MapperInterface
         $key = '';
         foreach ($this->getMetadata()->getPrimaryKey() as $name) {
             if (isset($data[$name]) === false) {
-                throw new RuntimeException(
+                throw new BadPrimaryKeyException(
                     "Unable to find the primary-key field : $name in the data '".var_export($data, true)."'"
                 );
             }
