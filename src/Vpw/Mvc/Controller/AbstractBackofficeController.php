@@ -106,31 +106,53 @@ abstract class AbstractBackofficeController extends AbstractActionController
         $viewModel->setVariable('form', $form);
         $viewModel->setVariable($this->getModelName(), $model);
 
-        $this->populateEditFormWithModel($form, $model);
+        $form->bind($model);
 
         if ($this->getRequest()->isPost() === true) {
 
-            $form->setData($this->getRequest()->getPost($this->getFormName()));
+            $form->setData($this->getFormData());
 
             if ($form->isValid() === false) {
                 $viewModel->formMessages = $form->getMessages();
-
                 return $viewModel;
             }
 
-            try {
-                $this->populateModelWithEditForm($form, $model);
+            $this->populateModelWithEditForm($form, $model);
 
-                $this->getMapper()->save($model);
-                $viewModel->successMessage = $this->successMessages[
-                    $this->getEvent()->getRouteMatch()->getParam('action')
-                ];
+            try {
+                if ($model->isLoaded() === false) {
+                    $this->insertModelObject($model);
+                } else {
+                    $this->updateModelObject($model);
+                }
+                $viewModel->successMessage = $this->getSuccessMessage();
             } catch (\Exception $e) {
+                echo '<pre>', $e, '</pre>';
                 $viewModel->failedMessage = $e->getMessage();
             }
         }
 
         return $viewModel;
+    }
+
+    protected function insertModelObject(ModelObject $model)
+    {
+        $this->getMapper()->insert($model);
+    }
+
+    protected function updateModelObject(ModelObject $model)
+    {
+        $this->getMapper()->update($model);
+    }
+
+    protected function getSuccessMessage()
+    {
+        return $this->successMessages[$this->getEvent()->getRouteMatch()->getParam('action')];
+    }
+
+    protected function getFormData()
+    {
+        return $this->getRequest()->getPost($this->getFormName());
     }
 
     /**
@@ -174,16 +196,6 @@ abstract class AbstractBackofficeController extends AbstractActionController
     protected function getFormName()
     {
         return $this->getMapper()->getTableName();
-    }
-
-    /**
-     *
-     * @param Form        $form
-     * @param ModelObject $model
-     */
-    protected function populateEditFormWithModel(Form $form, ModelObject $model)
-    {
-        $form->bind($model);
     }
 
     /**

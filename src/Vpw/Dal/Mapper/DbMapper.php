@@ -342,7 +342,7 @@ abstract class DbMapper implements MapperInterface
      * @param number $flags
      * @return \Zend\Db\Sql\Select
      */
-    protected function createSelect($where = null, array $options = array(), $flags = 0)
+    protected function createSelect($where = null, $options = null, $flags = 0)
     {
         $select = new Select($this->table);
 
@@ -350,16 +350,18 @@ abstract class DbMapper implements MapperInterface
             $select->where($where);
         }
 
-        if (isset($options['limit']) === true) {
-            $select->limit($options['limit']);
-        }
+        if (is_array($options) === true) {
+            if (isset($options['limit']) === true) {
+                $select->limit($options['limit']);
+            }
 
-        if (isset($options['offset']) === true) {
-            $select->offset($options['offset']);
-        }
+            if (isset($options['offset']) === true) {
+                $select->offset($options['offset']);
+            }
 
-        if (isset($options['order']) === true) {
-            $select->order($options['order']);
+            if (isset($options['order']) === true) {
+                $select->order($options['order']);
+            }
         }
 
         return $select;
@@ -439,7 +441,7 @@ abstract class DbMapper implements MapperInterface
      * For performance reason, we clone a prototype
      * @return \Vpw\Dal\ModelObject
      */
-    public function createModelObject($data)
+    public function createModelObject($data = null)
     {
         return clone $this->getModelObjectPrototype();
     }
