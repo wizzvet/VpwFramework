@@ -135,6 +135,30 @@ abstract class AbstractBackofficeController extends AbstractActionController
         return $viewModel;
     }
 
+    /**
+     * @return \Zend\View\Model\ViewModel
+     */
+    public function deleteAction()
+    {
+        $model = $this->getModelObject();
+
+        $viewModel = $this->createViewModel();
+        $viewModel->setVariable($this->getModelName(), $model);
+
+        if ($this->getRequest()->isPost() === true) {
+            if ($this->getRequest()->getPost('confirm') !== null) {
+                try {
+                    $this->deleteModelObject($model);
+                    $viewModel->successMessage = $this->getSuccessMessage();
+                } catch (\Exception $e) {
+                    $viewModel->failedMessage = $e->getMessage();
+                }
+            }
+        }
+
+        return $viewModel;
+    }
+
     protected function insertModelObject(ModelObject $model)
     {
         $this->getMapper()->insert($model);
@@ -145,6 +169,11 @@ abstract class AbstractBackofficeController extends AbstractActionController
         $this->getMapper()->update($model);
     }
 
+    protected function deleteModelObject(ModelObject $model)
+    {
+        $this->getMapper()->delete($model);
+    }
+
     protected function getSuccessMessage()
     {
         return $this->successMessages[$this->getEvent()->getRouteMatch()->getParam('action')];
@@ -153,28 +182,6 @@ abstract class AbstractBackofficeController extends AbstractActionController
     protected function getFormData()
     {
         return $this->getRequest()->getPost($this->getFormName());
-    }
-
-    /**
-     * @return \Zend\View\Model\ViewModel
-     */
-    public function deleteAction()
-    {
-        $viewModel = $this->createViewModel();
-        $viewModel->setVariable($this->getModelName(), $this->getModelObject());
-
-        if ($this->getRequest()->isPost() === true) {
-            if ($this->getRequest()->getPost('confirm') !== null) {
-                try {
-                    //$this->getMapper()->delete();
-                    $viewModel->successMessage = $this->successMessages['delete'];
-                } catch (\Exception $e) {
-                    $viewModel->failedMessage = $e->getMessage();
-                }
-            }
-        }
-
-        return $viewModel;
     }
 
     /**
