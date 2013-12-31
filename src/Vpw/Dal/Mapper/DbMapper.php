@@ -271,13 +271,14 @@ abstract class DbMapper implements MapperInterface
 
         return $this->findOne(
             $this->primaryKeyToWhere($key),
+            null,
             $flags
         );
     }
 
     protected function findOne($where, $options = null, $flags = 0)
     {
-        if (is_array($options) === false) {
+        if (func_num_args() < 3 && is_array($options) === false) {
             $flags = intval($options);
             $options = array();
         }
@@ -291,6 +292,7 @@ abstract class DbMapper implements MapperInterface
             throw new NoRowFoundException("No row found");
         }
 
+        $collection->rewind();
         return $collection->current();
     }
 

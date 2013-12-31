@@ -9,12 +9,12 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
     /**
      * @var array
      */
-    private $storage = array();
+    protected  $storage = array();
 
     /**
      * @var int
      */
-    private $totalNbRows = 0;
+    protected $totalNbRows = 0;
 
     /**
      *
@@ -209,5 +209,14 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
         }
 
         return $array;
+    }
+
+
+    public function __sleep()
+    {
+        return array(
+            'storage',
+            'totalNbRows'
+        );
     }
 }

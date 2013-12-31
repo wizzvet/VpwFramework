@@ -119,17 +119,20 @@ abstract class AbstractBackofficeController extends AbstractActionController
 
             $this->populateModelWithEditForm($form, $model);
 
+            $result = array();
+
             try {
                 if ($model->isLoaded() === false) {
                     $this->insertModelObject($model);
                 } else {
                     $this->updateModelObject($model);
                 }
-                $viewModel->successMessage = $this->getSuccessMessage();
+                $result['success'] = $this->getSuccessMessage();
             } catch (\Exception $e) {
-                echo '<pre>', $e, '</pre>';
-                $viewModel->failedMessage = $e->getMessage();
+                $result['exception'] = $e;
             }
+
+            $viewModel->setVariable('result', $result);
         }
 
         return $viewModel;
