@@ -86,7 +86,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
      *
      * @var HydratorInterface
      */
-    private $hydrator;
+    protected $hydrator;
 
     public function __construct(array $data = null)
     {

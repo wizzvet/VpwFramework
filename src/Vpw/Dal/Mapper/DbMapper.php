@@ -261,8 +261,13 @@ abstract class DbMapper implements MapperInterface
      * (non-PHPdoc)
      * @see \Vpw\Dal\Mapper\MapperInterface::k()
      */
-    public function find($key, $flags = 0)
+    public function find($key, $options = null, $flags = 0)
     {
+        if (func_num_args() < 3 && is_array($options) === false) {
+            $flags = intval($options);
+            $options = array();
+        }
+
         $cacheKey = $this->getModelObjectKey($key);
 
         if (isset($this->loadedMap[$cacheKey]) === true) {
@@ -271,13 +276,14 @@ abstract class DbMapper implements MapperInterface
 
         return $this->findOne(
             $this->primaryKeyToWhere($key),
+            $options,
             $flags
         );
     }
 
     protected function findOne($where, $options = null, $flags = 0)
     {
-        if (is_array($options) === false) {
+        if (func_num_args() < 3 && is_array($options) === false) {
             $flags = intval($options);
             $options = array();
         }
