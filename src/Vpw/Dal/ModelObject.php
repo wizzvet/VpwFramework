@@ -70,7 +70,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
      * Flag indiquant si l'objet a été chargé à partir de la base de données
      * @var unknown
      */
-    private $loaded = false;
+    protected $loaded = false;
 
     /**
      * Flags to know what has been loaded is this model object
@@ -261,5 +261,19 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
     public function setHydrator(HydratorInterface $hydrator)
     {
         $this->hydrator = $hydrator;
+    }
+
+
+    /**
+     * Serialize all protected vars, add loaded, and remove hydrator
+     *
+     * @return string
+     */
+    public function __sleep()
+    {
+        $vars = array_keys(get_object_vars($this));
+        unset($vars[array_search('hydrator', $vars)]);
+
+        return $vars;
     }
 }

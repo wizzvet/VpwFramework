@@ -297,6 +297,7 @@ abstract class DbMapper implements MapperInterface
             throw new NoRowFoundException("No row found");
         }
 
+        $collection->rewind();
         return $collection->current();
     }
 

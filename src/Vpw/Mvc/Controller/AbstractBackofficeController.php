@@ -119,16 +119,43 @@ abstract class AbstractBackofficeController extends AbstractActionController
 
             $this->populateModelWithEditForm($form, $model);
 
+            $result = array();
+
             try {
                 if ($model->isLoaded() === false) {
                     $this->insertModelObject($model);
                 } else {
                     $this->updateModelObject($model);
                 }
-                $viewModel->successMessage = $this->getSuccessMessage();
+                $result['success'] = $this->getSuccessMessage();
             } catch (\Exception $e) {
-                echo '<pre>', $e, '</pre>';
-                $viewModel->failedMessage = $e->getMessage();
+                $result['exception'] = $e;
+            }
+
+            $viewModel->setVariable('result', $result);
+        }
+
+        return $viewModel;
+    }
+
+    /**
+     * @return \Zend\View\Model\ViewModel
+     */
+    public function deleteAction()
+    {
+        $model = $this->getModelObject();
+
+        $viewModel = $this->createViewModel();
+        $viewModel->setVariable($this->getModelName(), $model);
+
+        if ($this->getRequest()->isPost() === true) {
+            if ($this->getRequest()->getPost('confirm') !== null) {
+                try {
+                    $this->deleteModelObject($model);
+                    $viewModel->successMessage = $this->getSuccessMessage();
+                } catch (\Exception $e) {
+                    $viewModel->failedMessage = $e->getMessage();
+                }
             }
         }
 
@@ -145,6 +172,11 @@ abstract class AbstractBackofficeController extends AbstractActionController
         $this->getMapper()->update($model);
     }
 
+    protected function deleteModelObject(ModelObject $model)
+    {
+        $this->getMapper()->delete($model);
+    }
+
     protected function getSuccessMessage()
     {
         return $this->successMessages[$this->getEvent()->getRouteMatch()->getParam('action')];
@@ -153,28 +185,6 @@ abstract class AbstractBackofficeController extends AbstractActionController
     protected function getFormData()
     {
         return $this->getRequest()->getPost($this->getFormName());
-    }
-
-    /**
-     * @return \Zend\View\Model\ViewModel
-     */
-    public function deleteAction()
-    {
-        $viewModel = $this->createViewModel();
-        $viewModel->setVariable($this->getModelName(), $this->getModelObject());
-
-        if ($this->getRequest()->isPost() === true) {
-            if ($this->getRequest()->getPost('confirm') !== null) {
-                try {
-                    //$this->getMapper()->delete();
-                    $viewModel->successMessage = $this->successMessages['delete'];
-                } catch (\Exception $e) {
-                    $viewModel->failedMessage = $e->getMessage();
-                }
-            }
-        }
-
-        return $viewModel;
     }
 
     /**
