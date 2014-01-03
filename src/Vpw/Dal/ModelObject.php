@@ -147,6 +147,10 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
         $filter = self::getFilter();
 
         foreach ($data as $name => $value) {
+            if ($value === null) {
+                continue;
+            }
+
             $methodName = 'set' . $filter->filter($name, true);
             if (method_exists($this, $methodName) === true) {
                 $this->$methodName($value);
