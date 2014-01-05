@@ -148,7 +148,7 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
      */
     public function next ()
     {
-        next($this->storage);
+        return next($this->storage);
     }
 
     /**
@@ -175,7 +175,7 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
      */
     public function rewind ()
     {
-        reset($this->storage);
+        return reset($this->storage);
     }
 
     /**
@@ -209,6 +209,13 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
         }
 
         return $array;
+    }
+
+    public function sort($key)
+    {
+        usort($this->storage, function ($o1, $o2) use ($key) {
+            return strcmp($o1->offsetGet($key), $o2->offsetGet($key));
+        });
     }
 
 
