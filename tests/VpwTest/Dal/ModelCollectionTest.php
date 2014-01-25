@@ -111,4 +111,56 @@ class ModelCollectionTest extends PHPUnit_Framework_TestCase
     {
         $this->assertEquals($this->object0, $this->collection->get($this->object0->getIdentityKey()));
     }
+
+
+    public function testDiff()
+    {
+        $newCollection = new ModelCollection();
+        $newCollection->add(clone $this->object0);
+        $newCollection->add(clone $this->object1);
+        $newCollection->add(clone $this->object2);
+
+        $diff = $newCollection->diff($this->collection);
+        $this->assertCount(1, $diff);
+        $this->assertEquals('bar3', $diff[0]->getFoo());
+    }
+
+
+    public function testIntersect()
+    {
+        $newCollection = new ModelCollection();
+        $newCollection->add(clone $this->object0);
+        $newCollection->add(clone $this->object1);
+        $newCollection->add(clone $this->object2);
+
+        $intersection = $newCollection->intersect($this->collection);
+        $this->assertCount(2, $intersection);
+        $this->assertEquals('bar', $intersection[0]->getFoo());
+        $this->assertEquals('bar2', $intersection[1]->getFoo());
+    }
+
+
+    public function testClone()
+    {
+        $clonedCollection = clone $this->collection;
+
+        $this->assertFalse($clonedCollection === $this->collection);
+        $this->assertFalse($clonedCollection->get('bar') === $this->collection->get('bar'), 'Objects have the same ref');
+        $this->assertTrue($clonedCollection->get('bar') == $this->collection->get('bar'), 'Objects are not identical');
+    }
+
+
+    public function testIdentity()
+    {
+        $this->assertEquals(
+            array($this->object0->getIdentity(), $this->object1->getIdentity()),
+            $this->collection->getIdentity()
+        );
+    }
+
+    public function testEmptyCollectionIdentity()
+    {
+        $collection = new ModelCollection();
+        $this->assertNull($collection->getIdentity());
+    }
 }

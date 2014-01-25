@@ -303,8 +303,8 @@ abstract class DbMapper implements MapperInterface
 
     /**
      *
-     * @param  string                   $where
-     * @param  string                   $options
+     * @param  mixed                   $where
+     * @param  array                   $options
      * @return \Vpw\Dal\ModelCollection
      */
     public function findAll($where = null, $options = null, $flags = 0)

@@ -5,6 +5,7 @@ use VpwTest\Dal\Asset\FooObject;
 
 use PHPUnit_Framework_TestCase;
 use VpwTest\Dal\Asset\Foo2Object;
+use Vpw\Dal\ModelCollection;
 
 class ModelObjectTest extends PHPUnit_Framework_TestCase
 {
@@ -37,6 +38,29 @@ class ModelObjectTest extends PHPUnit_Framework_TestCase
         $foo = new FooObject($data);
         $copy = $foo->getArrayCopy();
         $this->assertEquals($data, $copy);
+    }
+
+    public function testDeepArrayCopy()
+    {
+        $data2 = array('id' => 4, 'foo' => 'barz', 'ref' => 'wizzvet');
+        $data = array('foo'=>'bar', 'id' => null);
+        $foo = new FooObject($data);
+        $foo->setRef(new Foo2Object($data2));
+
+        $copy = $foo->getArrayCopy(true);
+        $this->assertTrue(is_array($copy['ref']), 'ref is not an array');
+        $this->assertEquals($copy['ref'], $data2);
+    }
+
+    public function testDeepArrayCopyWithCollection()
+    {
+        $data2 = array('id' => 4, 'foo' => 'barz', 'ref' => 'wizzvet');
+        $data = array('foo'=>'bar', 'id' => null);
+        $foo = new FooObject($data);
+        $foo->setRef(new ModelCollection(array(new Foo2Object($data2))));
+
+        $copy = $foo->getArrayCopy(true);
+        $this->assertTrue(is_array($copy['ref']), 'ref is not an array');
     }
 
     public function testHydrator()

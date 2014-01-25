@@ -6,9 +6,6 @@
  * Si on attribut de la classe ne doit pas être exporter, il suffit de le mettre en private
  * Par exemple : les objets issus des clé étrangères
  *
- * cf. http://www.php.net/manual/en/function.get-object-vars.php
- *
- *
  * @author christophe.borsenberger@vosprojetsweb.pro
  *
  */
@@ -23,6 +20,7 @@ use Zend\Stdlib\Hydrator\ClassMethods;
 use Zend\Stdlib\Hydrator\HydratorInterface;
 use Zend\Stdlib\Hydrator\Filter\MethodMatchFilter;
 use Zend\Stdlib\Hydrator\Filter\FilterComposite;
+use Vpw\Dal\Hydrator\ModelObjectHydrator;
 
 abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, HydratorAwareInterface
 {
@@ -54,12 +52,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
     protected static function getDefaultHydrator()
     {
         if (self::$defaultHydrator === null) {
-            self::$defaultHydrator = new ClassMethods();
-            self::$defaultHydrator->addFilter('getHydrator', new MethodMatchFilter('getHydrator'), FilterComposite::CONDITION_AND);
-            self::$defaultHydrator->addFilter('getArrayCopy', new MethodMatchFilter('getArrayCopy') , FilterComposite::CONDITION_AND);
-            self::$defaultHydrator->addFilter('isLoaded', new MethodMatchFilter('isLoaded') , FilterComposite::CONDITION_AND);
-            self::$defaultHydrator->addFilter('getIdentityKey', new MethodMatchFilter('getIdentityKey') , FilterComposite::CONDITION_AND);
-            self::$defaultHydrator->addFilter('getIdentity', new MethodMatchFilter('getIdentity') , FilterComposite::CONDITION_AND);
+            self::$defaultHydrator = new ModelObjectHydrator();
         }
 
         return self::$defaultHydrator;
@@ -81,12 +74,14 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
      */
     protected $flags = 0;
 
-
     /**
      *
      * @var HydratorInterface
      */
     protected $hydrator;
+
+
+
 
     public function __construct(array $data = null)
     {
@@ -139,7 +134,6 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
     }
 
     /**
-     * (non-PHPdoc)
      * @see \Zend\Stdlib\ArraySerializableInterface::exchangeArray()
      */
     public function exchangeArray(array $data)
@@ -159,30 +153,26 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
     }
 
     /**
-     * (non-PHPdoc)
+     * Returns only "real" data, not metadata like "flags". So if you want cache a model object use
+     * serialize instead of getArrayCopy
+     *
      * @see \Zend\Stdlib\ArraySerializableInterface::getArrayCopy()
      */
-    public function getArrayCopy()
+    public function getArrayCopy($deep = false)
     {
-        $filter = new CamelCaseToUnderscore();
+        $copy = $this->getHydrator()->extract($this);
 
-        $data = array();
-
-        foreach (array_keys(get_object_vars($this)) as $var) {
-            if ($var === 'loaded' || $var === 'hydrator') {
-                continue;
-            }
-
-            $methodName = 'get' . ucfirst($var);
-            if (method_exists($this, $methodName) === false) {
-                continue;
-            }
-
-            $key = strToLower($filter->filter($var));
-            $data[$key] = $this->$methodName();
+        if ($deep === false) {
+            return $copy;
         }
 
-        return $data;
+        foreach ($copy as $index => $value) {
+            if (is_object($value) && $value instanceof ArraySerializableInterface) {
+                $copy[$index] = $value->getArrayCopy(true);
+            }
+        }
+
+        return $copy;
     }
 
     public function isLoaded()
@@ -252,7 +242,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
     public function getHydrator()
     {
         if ($this->hydrator === null) {
-            $this->hydrator = static::getDefaultHydrator();
+            return static::getDefaultHydrator();
         }
 
         return $this->hydrator;
@@ -269,7 +259,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
 
 
     /**
-     * Serialize all protected vars, add loaded, and remove hydrator
+     * Serialize all data & metadata. Use this method to cache objects
      *
      * @return string
      */

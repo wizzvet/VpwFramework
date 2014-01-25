@@ -2,14 +2,21 @@
 namespace Vpw\Dal;
 
 use Zend\Stdlib\ArraySerializableInterface;
+use Zend\Stdlib\ArrayObject;
 
 class ModelCollection implements \Iterator, \Countable, ArraySerializableInterface
 {
 
     /**
-     * @var array
+     * @var ArrayObject
      */
-    protected  $storage = array();
+    protected $storage;
+
+    /**
+     *
+     * @var \Iterator
+     */
+    private $iterator;
 
     /**
      * @var int
@@ -22,13 +29,14 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
      */
     public function __construct(array $objects = array())
     {
+        $this->setStorage(new ArrayObject());
         $this->exchangeArray($objects);
     }
 
-
-    public function isEmpty()
+    public function setStorage(ArrayObject $storage)
     {
-        return count($this->storage) === 0;
+        $this->storage = $storage;
+        $this->iterator = null;
     }
 
     /**
@@ -58,7 +66,20 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
     public function add(ModelObject $object)
     {
         if ($this->contains($object) === false) {
-            $this->storage[] = $object;
+            $this->storage->append($object);
+            $this->iterator = null;
+        }
+    }
+
+
+    /**
+     *
+     * @param ModelCollection $collection
+     */
+    public function addAll(ModelCollection $collection)
+    {
+        foreach ($collection as $model) {
+            $this->add($model);
         }
     }
 
@@ -76,9 +97,10 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
             return null;
         }
 
-        foreach ($this->storage as $index => $object) {
+        foreach ($this->getIterator() as $index => $object) {
             if ($object->getIdentityKey() === $key) {
-                unset($this->storage[$index]);
+                $this->storage->offsetUnset($index);
+                $this->iterator = null;
                 return $object;
             }
         }
@@ -92,7 +114,7 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
      */
     public function get($key)
     {
-        foreach ($this->storage as $object) {
+        foreach ($this->getIterator() as $object) {
             if ($object->getIdentityKey() === $key) {
                 return $object;
             }
@@ -115,7 +137,7 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
             return false;
         }
 
-        foreach ($this->storage as $object) {
+        foreach ($this->getIterator() as $object) {
             if ($object->getIdentityKey() === $key) {
                 return true;
             }
@@ -124,58 +146,54 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
         return false;
     }
 
+
+    public function isEmpty()
+    {
+        return count($this->storage) === 0;
+    }
+
     /**
      *
      */
     public function clear()
     {
-        $this->storage = array();
+        $this->storage->exchangeArray(array());
+        $this->iterator = null;
     }
 
-    /**
-     * (non-PHPdoc)
-     * @see Iterator::current()
-     */
+
     public function current ()
     {
-        $current = current($this->storage);
-        return ($current === false) ? null : $current;
+        return $this->getIterator()->current();
     }
 
-    /**
-     * (non-PHPdoc)
-     * @see Iterator::next()
-     */
     public function next ()
     {
-        return next($this->storage);
+        return $this->getIterator()->next();
     }
 
-    /**
-     * (non-PHPdoc)
-     * @see Iterator::key()
-     */
     public function key ()
     {
-        return key($this->storage);
+        return $this->getIterator()->key();
     }
 
-    /**
-     * (non-PHPdoc)
-     * @see Iterator::valid()
-     */
     public function valid ()
     {
-        return key($this->storage) !== null;
+        return $this->getIterator()->valid();
     }
 
-    /**
-     * (non-PHPdoc)
-     * @see Iterator::rewind()
-     */
     public function rewind ()
     {
-        return reset($this->storage);
+        return $this->getIterator()->rewind();
+    }
+
+    protected function getIterator()
+    {
+        if ($this->iterator === null) {
+            $this->iterator = $this->storage->getIterator();
+        }
+
+        return $this->iterator;
     }
 
     /**
@@ -200,12 +218,12 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
         }
     }
 
-    public function getArrayCopy()
+    public function getArrayCopy($deep = false)
     {
         $array = array();
 
-        foreach ($this->storage as $object) {
-            $array[] = $object->getArrayCopy();
+        foreach ($this->getIterator() as $object) {
+            $array[] = $object->getArrayCopy($deep);
         }
 
         return $array;
@@ -213,11 +231,61 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
 
     public function sort($key)
     {
-        usort($this->storage, function ($o1, $o2) use ($key) {
+        $this->getIterator()->uasort(function ($o1, $o2) use ($key) {
             return strcmp($o1->offsetGet($key), $o2->offsetGet($key));
         });
     }
 
+
+    /**
+     * Return an array of ModelObject which are not present in $collection
+     *
+     * @param ModelCollection $collection
+     */
+    public function diff(ModelCollection $collection)
+    {
+        $diff = array();
+
+        foreach ($this->getIterator() as $model) {
+            if ($collection->contains($model) === false) {
+                $diff[] = $model;
+            }
+        }
+
+        return $diff;
+    }
+
+
+    public function intersect(ModelCollection $collection)
+    {
+        $intersection = array();
+
+        foreach ($this->getIterator() as $model) {
+            if ($collection->contains($model) === true) {
+                $intersection[] = $model;
+            }
+        }
+
+        return $intersection;
+    }
+
+
+    /**
+     * @return null|array Returns an array of identity, or null if the collection is empty
+     */
+    public function getIdentity()
+    {
+        if ($this->isEmpty() === true) {
+            return null;
+        }
+
+        $list = array();
+        foreach ($this->getIterator() as $model) {
+            $list[] = $model->getIdentity();
+        }
+
+        return $list;
+    }
 
     public function __sleep()
     {
@@ -225,5 +293,15 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
             'storage',
             'totalNbRows'
         );
+    }
+
+    public function __clone()
+    {
+        $this->storage = clone $this->storage;
+        $this->iterator = null;
+
+        foreach ($this->storage as $index => $model) {
+            $this->storage->offsetSet($index, clone $model);
+        }
     }
 }
