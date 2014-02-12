@@ -281,7 +281,7 @@ abstract class DbMapper implements MapperInterface
         );
     }
 
-    protected function findOne($where, $options = null, $flags = 0)
+    public function findOne($where, $options = null, $flags = 0)
     {
         if (func_num_args() < 3 && is_array($options) === false) {
             $flags = intval($options);
@@ -299,6 +299,33 @@ abstract class DbMapper implements MapperInterface
 
         $collection->rewind();
         return $collection->current();
+    }
+
+
+    /**
+     *  Find all Object for an foreign key
+     *
+     * @param ModelObject|ModelCollection $modelOrCollection
+     * @param string $foreignKey
+     * @param number $flags
+     * @param string $options
+     * @return \Vpw\Dal\ModelCollection
+     */
+    public function findAllByForeignKey($modelOrCollection, $foreignKey, $flags = 0, $where = null, $options = null)
+    {
+        $identity = $modelOrCollection->getIdentity();
+
+        if ($identity === null) {
+            return new $this->modelCollectionClassName();
+        }
+
+        if ($where === null) {
+            $where = array();
+        }
+
+        $where = array_merge($where, array($foreignKey => $modelOrCollection->getIdentity()));
+
+        return $this->findAll($where, $options, $flags);
     }
 
     /**

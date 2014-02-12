@@ -90,7 +90,7 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
     public function remove($key)
     {
         if ($key instanceof ModelObject) {
-            $key = $key->getIdentityKey();
+            return $this->removeObject($key);
         }
 
         if ($key === null) {
@@ -99,6 +99,19 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
 
         foreach ($this->getIterator() as $index => $object) {
             if ($object->getIdentityKey() === $key) {
+                $this->storage->offsetUnset($index);
+                $this->iterator = null;
+                return $object;
+            }
+        }
+
+        return null;
+    }
+
+    public function removeObject($object)
+    {
+        foreach ($this->getIterator() as $index => $tmp) {
+            if ($tmp === $object) {
                 $this->storage->offsetUnset($index);
                 $this->iterator = null;
                 return $object;
@@ -160,7 +173,6 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
         $this->storage->exchangeArray(array());
         $this->iterator = null;
     }
-
 
     public function current ()
     {
