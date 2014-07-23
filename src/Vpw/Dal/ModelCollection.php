@@ -4,6 +4,13 @@ namespace Vpw\Dal;
 use Zend\Stdlib\ArraySerializableInterface;
 use Zend\Stdlib\ArrayObject;
 
+
+/**
+ * The identity key could be null for the new object. So we have to handle this specifity.
+ *
+ * @author christophe.borsenberger@wizzvet.com
+ *
+ */
 class ModelCollection implements \Iterator, \Countable, ArraySerializableInterface
 {
 
@@ -13,15 +20,14 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
     protected $storage;
 
     /**
-     *
-     * @var \Iterator
-     */
-    private $iterator;
-
-    /**
      * @var int
      */
     protected $totalNbRows = 0;
+
+    /**
+     * @var \Iterator
+     */
+    private $iterator = null;
 
     /**
      *
@@ -38,6 +44,12 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
         $this->storage = $storage;
         $this->iterator = null;
     }
+
+    public function getStorage()
+    {
+        return $this->storage;
+    }
+
 
     /**
      * Returns the total number of rows available, not in the collection, but in globaly
@@ -57,20 +69,6 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
         $this->totalNbRows = intval($totalNbRows);
     }
 
-    /**
-     * On n'utiliser pas l' "identity key" comme index, car elle peut est être nulle, pour les objects nouvellement
-     * créés
-     *
-     * @param ModelObject $object
-     */
-    public function add(ModelObject $object)
-    {
-        if ($this->contains($object) === false) {
-            $this->storage->append($object);
-            $this->iterator = null;
-        }
-    }
-
 
     /**
      *
@@ -84,119 +82,156 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
     }
 
     /**
-     *
-     * @param string|ModelObject $key
+     * @param ModelObject $object
      */
-    public function remove($key)
+    public function add(ModelObject $object)
     {
-        if ($key instanceof ModelObject) {
-            return $this->removeObject($key);
-        }
+        if ($this->contains($object) === false) {
 
-        if ($key === null) {
-            return null;
-        }
+            $key = $object->getIdentityKey();
 
-        foreach ($this->getIterator() as $index => $object) {
-            if ($object->getIdentityKey() === $key) {
-                $this->storage->offsetUnset($index);
-                $this->iterator = null;
-                return $object;
+            if ($key === null) {
+                $this->storage->append($object);
+            } else {
+                $this->storage->offsetSet($key, $object);
             }
-        }
 
-        return null;
+            $this->iterator = null;
+        }
     }
 
-    public function removeObject($object)
-    {
-        foreach ($this->getIterator() as $index => $tmp) {
-            if ($tmp === $object) {
-                $this->storage->offsetUnset($index);
-                $this->iterator = null;
-                return $object;
-            }
-        }
-
-        return null;
-    }
 
     /**
-     *
+     * @param string|ModelObject $key
+     */
+    public function remove($keyOrModelObject)
+    {
+        $key = $this->getIdentityKey($keyOrModelObject);
+
+        if ($key === null) {
+            foreach ($this->getIterator() as $index => $tmp) {
+                if ($tmp === $keyOrModelObject) {
+                    $this->storage->offsetUnset($index);
+                    $this->iterator = null;
+                }
+                return $tmp;
+            }
+        } else {
+            $o = $this->storage->offsetGet($key);
+            $this->storage->offsetUnset($key);
+            return $o;
+        }
+    }
+
+
+    /**
      * @param string $key
+     * @return ModelObject the model object or null
      */
     public function get($key)
     {
-        foreach ($this->getIterator() as $object) {
-            if ($object->getIdentityKey() === $key) {
-                return $object;
-            }
-        }
-
-        return null;
+        return $this->storage->offsetGet($key);
     }
 
     /**
-     *
+     * We use the '==' operator to compare the data of thes objects, and not the objects themselves.
      * @param string|ModelObject $key
+     *
+     * @return boolean
      */
-    public function contains($key)
+    public function contains($keyOrModelObject)
     {
-        if ($key instanceof ModelObject) {
-            $key = $key->getIdentityKey();
-        }
+        $key = $this->getIdentityKey($keyOrModelObject);
 
         if ($key === null) {
-            return false;
-        }
-
-        foreach ($this->getIterator() as $object) {
-            if ($object->getIdentityKey() === $key) {
-                return true;
+            foreach ($this->getIterator() as $object) {
+                if ($object == $keyOrModelObject) {
+                    return true;
+                }
             }
         }
 
-        return false;
+        return $this->storage->offsetExists($key);
+    }
+
+    /**
+     * Return the identity key
+     *
+     * @param string|ModelObject $keyOrModelObject
+     * @return $string
+     */
+    private function getIdentityKey($keyOrModelObject)
+    {
+        if ($keyOrModelObject instanceof ModelObject) {
+            return $keyOrModelObject->getIdentityKey();
+        }
+
+        return $keyOrModelObject;
     }
 
 
+
+
+
+
+    /**
+     *
+     * @return boolean
+     */
     public function isEmpty()
     {
         return count($this->storage) === 0;
     }
 
-    /**
-     *
-     */
     public function clear()
     {
         $this->storage->exchangeArray(array());
         $this->iterator = null;
     }
 
+    /**
+     * (non-PHPdoc)
+     * @see Iterator::current()
+     */
     public function current ()
     {
         return $this->getIterator()->current();
     }
 
+    /**
+     * (non-PHPdoc)
+     * @see Iterator::next()
+     */
     public function next ()
     {
-        return $this->getIterator()->next();
+        $this->getIterator()->next();
     }
 
+    /**
+     * (non-PHPdoc)
+     * @see Iterator::key()
+     */
     public function key ()
     {
         return $this->getIterator()->key();
     }
 
+    /**
+     * (non-PHPdoc)
+     * @see Iterator::valid()
+     */
     public function valid ()
     {
         return $this->getIterator()->valid();
     }
 
+    /**
+     * (non-PHPdoc)
+     * @see Iterator::rewind()
+     */
     public function rewind ()
     {
-        return $this->getIterator()->rewind();
+        $this->getIterator()->rewind();
     }
 
     protected function getIterator()
@@ -243,9 +278,26 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
 
     public function sort($key)
     {
-        $this->getIterator()->uasort(function ($o1, $o2) use ($key) {
-            return strcmp($o1->offsetGet($key), $o2->offsetGet($key));
+        $this->storage->uasort(function ($o1, $o2) use ($key) {
+            $val1 = $o1->offsetGet($key);
+            $val2 = $o2->offsetGet($key);
+
+            if (is_int($val1) === true && is_int($val2) === true) {
+                if ($val1 < $val2) {
+                    return -1;
+                }
+
+                if ($val1 > $val2) {
+                    return 1;
+                }
+
+                return 0;
+            }
+
+            return strcmp($val1, $val2);
         });
+
+        $this->iterator = null;
     }
 
 
@@ -270,11 +322,11 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
 
     public function intersect(ModelCollection $collection)
     {
-        $intersection = array();
+        $intersection = new ModelCollection();
 
         foreach ($this->getIterator() as $model) {
             if ($collection->contains($model) === true) {
-                $intersection[] = $model;
+                $intersection->add($model);
             }
         }
 
@@ -297,14 +349,6 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
         }
 
         return $list;
-    }
-
-    public function __sleep()
-    {
-        return array(
-            'storage',
-            'totalNbRows'
-        );
     }
 
     public function __clone()

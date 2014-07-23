@@ -11,6 +11,7 @@ class FooObject extends ModelObject
 
     protected $id;
 
+    private $object;
 
     /**
     * @param int $id
@@ -66,5 +67,15 @@ class FooObject extends ModelObject
     public function getIdentity()
     {
         return $this->getFoo();
+    }
+
+    public function setObject($object)
+    {
+        $this->object = $object;
+    }
+
+    public function getObject()
+    {
+        return $this->object;
     }
 }

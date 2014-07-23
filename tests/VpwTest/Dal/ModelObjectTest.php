@@ -34,7 +34,7 @@ class ModelObjectTest extends PHPUnit_Framework_TestCase
 
     public function testArrayCopy()
     {
-        $data = array('foo'=>'bar', 'ref' => null, 'id' => null);
+        $data = array('foo'=>'bar', 'ref' => null, 'id' => null, 'object' => null);
         $foo = new FooObject($data);
         $copy = $foo->getArrayCopy();
         $this->assertEquals($data, $copy);
@@ -95,6 +95,35 @@ class ModelObjectTest extends PHPUnit_Framework_TestCase
     {
         $data = array('foo'=>'foo', 'ref' => 'bar', 'id' => null);
         $foo = new Foo2Object($data);
-        $this->assertEquals('foo-bar', $foo->getIdentityKey());
+        $this->assertEquals('id-foo-bar', $foo->getIdentityKey());
     }
+
+    public function testSerialization()
+    {
+        $data = array('id' => 4, 'foo' => 'barz', 'ref' => 'wizzvet');
+        $foo = new FooObject($data);
+        $newFoo = unserialize(serialize($foo));
+        $this->assertEquals($newFoo, $foo);
+    }
+
+
+    public function testSerializationWithSubObject()
+    {
+        $foo = new FooObject(
+            array(
+                'id' => 4,
+                'foo' => 'barz',
+                'object' => new Foo2Object(
+                    array(
+                        'id' => 18,
+                        'foo' => 'bar2'
+                    )
+                ),
+            )
+        );
+
+        $newFoo = unserialize(serialize($foo));
+        $this->assertEquals($newFoo, $foo);
+    }
+
 }

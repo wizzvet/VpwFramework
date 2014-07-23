@@ -1,13 +1,11 @@
 <?php
 /**
  * Important : Les classes héritant de cet objet devront déclarées leurs attributs
- * en "protected", afin que la fonction get_object_vars puisse les récupérer.
+ * en "protected", afin que la serialization fonctionne correctement.
  *
- * Si on attribut de la classe ne doit pas être exporter, il suffit de le mettre en private
- * Par exemple : les objets issus des clé étrangères
+ * Si on attribut de la classe ne doit pas être serializer, il suffit de la déclarer en private.
  *
  * @author christophe.borsenberger@vosprojetsweb.pro
- *
  */
 
 namespace Vpw\Dal;
@@ -29,7 +27,6 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
      * @var UnderscoreToCamelCase
      */
     private static $filter;
-
 
     /**
      * @var ClassMethods
@@ -78,9 +75,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
      *
      * @var HydratorInterface
      */
-    protected $hydrator;
-
-
+    private $hydrator;
 
 
     public function __construct(array $data = null)
@@ -91,30 +86,20 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
     }
 
     /**
-     * Retourne une clé qui permet d'identifier cet objet
+     * Retourne une clé permettant d'identifier cet objet.
+     *
+     * On ne stocke pas la clé en cache, car dès qu'une valeur de le clé est modifiée, il faut invalider le cache. Et ceci doit être fait
+     * dans chaque sous classe, ce qui peut entraîner bcp d'erreurs lors de la maintenance.
      */
     final public function getIdentityKey()
     {
         $identity = $this->getIdentity();
 
-        if ($identity === null) {
-            return null;
-        }
-
         if (is_array($identity) == false) {
             return $identity;
         }
 
-        $key = '';
-        foreach ($identity as $val) {
-            if ($val === null) {
-                return null;
-            }
-
-            $key .= $val . '-';
-        }
-
-        return substr($key, 0, -1);
+        return $this->buildIdentityKey($identity);
     }
 
     /**
@@ -122,6 +107,27 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
      */
     abstract public function getIdentity();
 
+    /**
+     * Prefix with "id" to not have a numeric identity key
+     *
+     * @param array $identity
+     * @return NULL|string
+     */
+    final protected function buildIdentityKey(array $identity)
+    {
+        $key = 'id';
+
+        foreach ($identity as $val) {
+
+            if ($val === null) {
+                return null;
+            }
+
+            $key .= '-' . $val;
+        }
+
+        return $key;
+    }
 
     /**
      *
@@ -190,7 +196,12 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
         $this->flags = $flags;
     }
 
-    public function hashFlag($flag)
+    public function getFlags($flag)
+    {
+        return $this->flags;
+    }
+
+    public function hasFlags($flag)
     {
         return ($flag & $this->flags === $flag);
     }
@@ -255,19 +266,5 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
     public function setHydrator(HydratorInterface $hydrator)
     {
         $this->hydrator = $hydrator;
-    }
-
-
-    /**
-     * Serialize all data & metadata. Use this method to cache objects
-     *
-     * @return string
-     */
-    public function __sleep()
-    {
-        $vars = array_keys(get_object_vars($this));
-        unset($vars[array_search('hydrator', $vars)]);
-
-        return $vars;
     }
 }

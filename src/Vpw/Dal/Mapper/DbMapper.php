@@ -271,7 +271,9 @@ abstract class DbMapper implements MapperInterface
         $cacheKey = $this->getModelObjectKey($key);
 
         if (isset($this->loadedMap[$cacheKey]) === true) {
-            return $this->loadedMap[$cacheKey];
+            if ($this->loadedMap[$cacheKey]->hasFlags($flags) === true) {
+                return $this->loadedMap[$cacheKey];
+            }
         }
 
         return $this->findOne(
@@ -289,14 +291,31 @@ abstract class DbMapper implements MapperInterface
         }
 
         $select = $this->createSelect($where, $options, $flags);
-        $resultSet = $this->createStatement($select)->execute();
-        $collection = $this->loadData($resultSet, $flags);
-        $resultSet->getResource()->close();
+
+        $collection = $this->selectToCollection($select, $flags);
 
         if ($collection->count() === 0) {
             throw new NoRowFoundException("No row found");
         }
 
+        $collection->rewind();
+        return $collection->current();
+    }
+
+
+    protected function selectToCollection($select, $flags = 0)
+    {
+        $resultSet = $this->createStatement($select)->execute();
+        $collection = $this->loadData($resultSet, $flags);
+        $resultSet->getResource()->close();
+
+        return $collection;
+    }
+
+
+    protected function selectToModel($select, $flags = 0)
+    {
+        $collection = $this->selectToCollection($select, $flags);
         $collection->rewind();
         return $collection->current();
     }
@@ -323,7 +342,7 @@ abstract class DbMapper implements MapperInterface
             $where = array();
         }
 
-        $where = array_merge($where, array($foreignKey => $modelOrCollection->getIdentity()));
+        $where = array_merge($where, array($foreignKey => $identity));
 
         return $this->findAll($where, $options, $flags);
     }
@@ -385,20 +404,26 @@ abstract class DbMapper implements MapperInterface
         }
 
         if (is_array($options) === true) {
-            if (isset($options['limit']) === true) {
-                $select->limit($options['limit']);
-            }
-
-            if (isset($options['offset']) === true) {
-                $select->offset($options['offset']);
-            }
-
-            if (isset($options['order']) === true) {
-                $select->order($options['order']);
-            }
+            $this->completeSelectWithOptions($select, $options);
         }
 
         return $select;
+    }
+
+
+    public function completeSelectWithOptions(Select $select, array $options)
+    {
+        if (isset($options['limit']) === true) {
+            $select->limit($options['limit']);
+        }
+
+        if (isset($options['offset']) === true) {
+            $select->offset($options['offset']);
+        }
+
+        if (isset($options['order']) === true) {
+            $select->order($options['order']);
+        }
     }
 
 

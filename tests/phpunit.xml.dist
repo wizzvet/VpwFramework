@@ -4,7 +4,9 @@
 <phpunit backupGlobals="false"
          backupStaticAttributes="false"
          strict="true"
-         verbose="true">
+         verbose="true"
+         bootstrap="Bootstrap.php"
+         >
   <testsuites>
     <testsuite name="vpw-framework">
       <directory suffix="Test.php">./</directory>
