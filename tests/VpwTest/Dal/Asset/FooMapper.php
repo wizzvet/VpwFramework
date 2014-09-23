@@ -25,18 +25,23 @@ class FooMapper extends DbMapper
         $idColumn->setDataType('varchar');
         $idColumn->setErrata('auto_increment', true);
 
-        $pkColumn = new ConstraintObject('pk', 'bar', 'buz');
-        $pkColumn->setType('PRIMARY KEY');
-        $pkColumn->setColumns(array('id'));
+        $tsColumn = new ColumnObject('update_time', 'bar', 'buz');
+        $tsColumn->setDataType('timstamp');
+        $tsColumn->setErrata('on_update', 'CURRENT_TIMESTAMP');
+
+        $pkConstraint = new ConstraintObject('pk', 'bar', 'buz');
+        $pkConstraint->setType('PRIMARY KEY');
+        $pkConstraint->setColumns(array('id'));
 
         return new DbMetadata(
             array(
                 'foo' => $fooColumn,
                 'ref' => $refColumn,
                 'id' => $idColumn,
+                'update_time' => $tsColumn
             ),
             array(
-                $pkColumn
+                $pkConstraint
             )
         );
     }

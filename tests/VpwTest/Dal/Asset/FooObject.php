@@ -11,6 +11,8 @@ class FooObject extends ModelObject
 
     protected $id;
 
+    protected $update_time;
+
     private $object;
 
     /**
@@ -63,6 +65,23 @@ class FooObject extends ModelObject
     {
         return $this->ref;
     }
+
+    /**
+      * @return string
+      */
+    public function getUpdateTime()
+    {
+        return $this->update_time;
+    }
+
+    /**
+     * @param string $update_time
+     */
+    public function setUpdateTime($update_time)
+    {
+        $this->update_time = $update_time;
+    }
+
 
     public function getIdentity()
     {

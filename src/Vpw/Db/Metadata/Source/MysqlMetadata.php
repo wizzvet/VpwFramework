@@ -68,6 +68,10 @@ class MysqlMetadata extends \Zend\Db\Metadata\Source\MysqlMetadata
             $erratas = array();
             $erratas['auto_increment'] = (strpos($row['EXTRA'], 'auto_increment') !== false);
 
+            $erratas['on_update'] = (stripos($row['EXTRA'], 'on update CURRENT_TIMESTAMP') !== false)
+                                    ? 'CURRENT_TIMESTAMP'
+                                    : null;
+
             $matches = array();
             if (preg_match('/^(?:enum|set)\((.+)\)$/i', $row['COLUMN_TYPE'], $matches)) {
                 $permittedValues = $matches[1];

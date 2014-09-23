@@ -12,6 +12,7 @@ use Zend\Db\Adapter\ParameterContainer;
 use Zend\Db\Adapter\Adapter;
 
 use PHPUnit_Framework_TestCase;
+use Zend\Db\Adapter\Driver\Mysqli\Statement;
 
 class DbMapperTest extends PHPUnit_Framework_TestCase
 {
@@ -29,15 +30,14 @@ class DbMapperTest extends PHPUnit_Framework_TestCase
 
     public function setUp()
     {
-        $db = new Adapter(
-            array(
-                'driver' => 'mysqli',
-                'hostname' => 'localhost',
-                'username' => 'tdpr-admin',
-                'database' => 'tdpr_test',
-                'password' => 'neric'
-            )
-        );
+        $driver = $this->getMockBuilder('Zend\Db\Adapter\Driver\Mysqli\Mysqli')
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $driver->method('createStatement')->willReturn(new Statement());
+        $driver->method('formatParameterName')->willReturn('?');
+
+        $db = new Adapter($driver, new \Zend\Db\Adapter\Platform\Mysql());
 
         $this->mapper = new FooMapper(
             $db,
@@ -47,7 +47,8 @@ class DbMapperTest extends PHPUnit_Framework_TestCase
         $this->object = new FooObject(
             array(
                 'foo' => 'bar',
-                'ref' => 'titi'
+                'ref' => 'titi',
+                'update_time' => '2014-09-23 10:42:20'
             )
         );
     }

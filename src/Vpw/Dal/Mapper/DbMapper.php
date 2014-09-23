@@ -158,12 +158,21 @@ abstract class DbMapper implements MapperInterface
         return $this->createStatement($update);
     }
 
-
-    private function extractValues(ModelObject $object)
+    /**
+     * Extract all the values, from the model object,  which will be inserted in the database.
+     * All the values, except :
+     *   - the auto update timestamp column
+     *
+     * @param ModelObject $object
+     * @return array
+     */
+    public function extractValues(ModelObject $object)
     {
         $values = array();
-        foreach (array_keys($this->getMetadata()->getColumns()) as $key) {
-            $values[$key] = $object->offsetGet($key);
+        foreach ($this->getMetadata()->getColumns() as $key => $column) {
+            if ($column->getErrata('on_update') !== 'CURRENT_TIMESTAMP') {
+                $values[$key] = $object->offsetGet($key);
+            }
         }
         return $values;
     }
@@ -303,24 +312,6 @@ abstract class DbMapper implements MapperInterface
     }
 
 
-    protected function selectToCollection($select, $flags = 0)
-    {
-        $resultSet = $this->createStatement($select)->execute();
-        $collection = $this->loadData($resultSet, $flags);
-        $resultSet->getResource()->close();
-
-        return $collection;
-    }
-
-
-    protected function selectToModel($select, $flags = 0)
-    {
-        $collection = $this->selectToCollection($select, $flags);
-        $collection->rewind();
-        return $collection->current();
-    }
-
-
     /**
      *  Find all Object for an foreign key
      *
@@ -362,13 +353,19 @@ abstract class DbMapper implements MapperInterface
 
         $select = $this->createSelect($where, $options, $flags);
 
+        return $this->selectToCollection($select, $flags);
+    }
+
+
+    protected function selectToCollection($select, $flags = 0)
+    {
         $hasLimit = $select->getRawState(Select::LIMIT) !== null;
 
         if ($hasLimit === true) {
             $select->quantifier("SQL_CALC_FOUND_ROWS");
         }
 
-        $result = $this->createStatement($select)->execute();
+        $resultSet = $this->createStatement($select)->execute();
 
         if ($hasLimit === true) {
             $totalNbRowsResult = $this->adapter->getDriver()->getConnection()->execute("SELECT FOUND_ROWS() as nb");
@@ -376,15 +373,23 @@ abstract class DbMapper implements MapperInterface
             $totalNbRowsResult->getResource()->close();
         }
 
-        $collection = $this->loadData($result, $flags);
+        $collection = $this->loadData($resultSet, $flags);
 
         if ($hasLimit === true) {
             $collection->setTotalNbRows($totalNbRows);
         }
 
-        $result->getResource()->close();
+        $resultSet->getResource()->close();
 
         return $collection;
+    }
+
+
+    protected function selectToModel($select, $flags = 0)
+    {
+        $collection = $this->selectToCollection($select, $flags);
+        $collection->rewind();
+        return $collection->current();
     }
 
 
@@ -410,7 +415,10 @@ abstract class DbMapper implements MapperInterface
         return $select;
     }
 
-
+    /**
+     * @param Select $select
+     * @param array $options
+     */
     public function completeSelectWithOptions(Select $select, array $options)
     {
         if (isset($options['limit']) === true) {

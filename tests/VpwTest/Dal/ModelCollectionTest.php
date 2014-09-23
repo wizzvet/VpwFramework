@@ -28,6 +28,7 @@ class ModelCollectionTest extends PHPUnit_Framework_TestCase
             'foo' => null,
             'ref' => 'A',
             'id' => 16357,
+            'update_time' => null,
             'object' => null
         ),
 
@@ -35,6 +36,7 @@ class ModelCollectionTest extends PHPUnit_Framework_TestCase
             'foo' => 'bar2',
             'ref' => 'B',
             'id' => 2146,
+            'update_time' => '2014-09-23 10:42:00',
             'object' => null
         ),
 
@@ -42,6 +44,7 @@ class ModelCollectionTest extends PHPUnit_Framework_TestCase
             'foo' => 'bar3',
             'ref' => 'C',
             'id' => 489,
+            'update_time' => '2014-09-22 10:42:00',
             'object' => null
         )
     );

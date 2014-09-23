@@ -34,7 +34,13 @@ class ModelObjectTest extends PHPUnit_Framework_TestCase
 
     public function testArrayCopy()
     {
-        $data = array('foo'=>'bar', 'ref' => null, 'id' => null, 'object' => null);
+        $data = array(
+            'foo'=>'bar',
+            'ref' => null,
+            'id' => null,
+            'object' => null,
+            'update_time' => '2014-09-22 10:42:00'
+        );
         $foo = new FooObject($data);
         $copy = $foo->getArrayCopy();
         $this->assertEquals($data, $copy);
