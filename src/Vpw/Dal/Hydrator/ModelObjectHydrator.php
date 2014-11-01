@@ -22,8 +22,7 @@ class ModelObjectHydrator extends ClassMethods
         $this->filterComposite->removeFilter("has");
 
         $this->addFilter('getHydrator', new MethodMatchFilter('getHydrator'), FilterComposite::CONDITION_AND);
-        $this->addFilter('getArrayCopy', new MethodMatchFilter('getArrayCopy') , FilterComposite::CONDITION_AND);
-        $this->addFilter('isLoaded', new MethodMatchFilter('isLoaded') , FilterComposite::CONDITION_AND);
+        $this->addFilter('getFlags', new MethodMatchFilter('getHydrator'), FilterComposite::CONDITION_AND);
         $this->addFilter('getIdentityKey', new MethodMatchFilter('getIdentityKey') , FilterComposite::CONDITION_AND);
         $this->addFilter('getIdentity', new MethodMatchFilter('getIdentity') , FilterComposite::CONDITION_AND);
     }

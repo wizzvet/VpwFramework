@@ -3,6 +3,7 @@ namespace Vpw\Dal;
 
 use Zend\Stdlib\ArraySerializableInterface;
 use Zend\Stdlib\ArrayObject;
+use Zend\Stdlib\Hydrator\HydrationInterface;
 
 
 /**
@@ -39,12 +40,18 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
         $this->exchangeArray($objects);
     }
 
+    /**
+     * @param ArrayObject $storage
+     */
     public function setStorage(ArrayObject $storage)
     {
         $this->storage = $storage;
         $this->iterator = null;
     }
 
+    /**
+     *
+     */
     public function getStorage()
     {
         return $this->storage;
@@ -79,6 +86,8 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
         foreach ($collection as $model) {
             $this->add($model);
         }
+
+        return $this;
     }
 
     /**
@@ -170,10 +179,6 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
     }
 
 
-
-
-
-
     /**
      *
      * @return boolean
@@ -254,28 +259,8 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
 
     /**
      *
-     * (non-PHPdoc)
-     * @see \Zend\Stdlib\ArraySerializableInterface::exchangeArray()
+     * @param string $key property name
      */
-    public function exchangeArray(array $objects)
-    {
-        $this->clear();
-        foreach ($objects as $object) {
-            $this->add($object);
-        }
-    }
-
-    public function getArrayCopy($deep = false)
-    {
-        $array = array();
-
-        foreach ($this->getIterator() as $object) {
-            $array[] = $object->getArrayCopy($deep);
-        }
-
-        return $array;
-    }
-
     public function sort($key)
     {
         $this->storage->uasort(function ($o1, $o2) use ($key) {
@@ -320,6 +305,11 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
     }
 
 
+    /**
+     *
+     * @param ModelCollection $collection
+     * @return \Vpw\Dal\ModelCollection
+     */
     public function intersect(ModelCollection $collection)
     {
         $intersection = new ModelCollection();
@@ -331,6 +321,41 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
         }
 
         return $intersection;
+    }
+
+
+    /**
+     *  Filter the current collection. Returns only the model objects wich have expected values
+     *
+     * @param string $attr
+     * @param mixed $value
+     * @return \Vpw\Dal\ModelCollection
+     */
+    public function filterBy($filters)
+    {
+        if (is_array($filters) === true) {
+            $callback = function ($model) use ($filters) {
+                $result = true;
+                foreach ($filters as $key => $expectedValue) {
+                    if ($model->offsetGet($key) !== $expectedValue) {
+                        $result = false;
+                    }
+                }
+
+                return $result;
+            };
+        } else {
+            $callback = $filters;
+        }
+
+        $collection = new static;
+        foreach ($this->getIterator() as $model) {
+            if (call_user_func($callback, $model) === true) {
+                $collection->add($model);
+            }
+        }
+
+        return $collection;
     }
 
 
@@ -351,13 +376,36 @@ class ModelCollection implements \Iterator, \Countable, ArraySerializableInterfa
         return $list;
     }
 
+
+    //ArraySerializable
+
+    /**
+     * @param array $objects
+     */
+    public function exchangeArray(array $objects)
+    {
+        $this->clear();
+        $this->setTotalNbRows(count($objects));
+
+        foreach ($objects as $object) {
+            $this->add($object);
+        }
+    }
+
+    /**
+     * @return array
+     */
+    public function getArrayCopy()
+    {
+        return $this->getStorage()->getArrayCopy();
+    }
+
+    /**
+     *
+     */
     public function __clone()
     {
         $this->storage = clone $this->storage;
         $this->iterator = null;
-
-        foreach ($this->storage as $index => $model) {
-            $this->storage->offsetSet($index, clone $model);
-        }
     }
 }

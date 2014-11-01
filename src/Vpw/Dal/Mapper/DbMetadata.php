@@ -59,6 +59,10 @@ class DbMetadata implements MetadataInterface
         return $this->constraints;
     }
 
+    /**
+     * (non-PHPdoc)
+     * @see \Vpw\Dal\Mapper\MetadataInterface::getPrimaryKey()
+     */
     public function getPrimaryKey()
     {
         foreach ($this->constraints as $constraint) {

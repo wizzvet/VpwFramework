@@ -62,14 +62,6 @@ class ModelCollectionTest extends PHPUnit_Framework_TestCase
     }
 
 
-    public function testExchangeArray()
-    {
-        $this->collection->exchangeArray(array($this->object2));
-
-        $this->assertCount(1, $this->collection);
-    }
-
-
     public function testCount()
     {
         $this->assertCount(3, $this->collection);
@@ -91,11 +83,6 @@ class ModelCollectionTest extends PHPUnit_Framework_TestCase
         $o = $this->collection->current();
         $this->assertInstanceOf('\VpwTest\Dal\Asset\FooObject', $o);
         $this->assertEquals('bar3', $o->getFoo());
-    }
-
-    public function testArrayCopy()
-    {
-        $this->assertEquals($this->collection->getArrayCopy(), $this->data);
     }
 
     public function testRemoveObject()
@@ -202,5 +189,21 @@ class ModelCollectionTest extends PHPUnit_Framework_TestCase
         }
 
         $this->assertEquals(array('A', 'B', 'C'), $refs);
+    }
+
+
+
+    public function testFilterCollectionWith1Filter()
+    {
+        $filtered = $this->collection->filterBy(array('ref' => 'B'));
+        $this->assertCount(1, $filtered);
+        $this->assertEquals('B', $filtered->get('bar2')->getRef());
+    }
+
+
+    public function testFilterCollectionWith2Filters()
+    {
+        $filtered = $this->collection->filterBy(array('ref' => 'B', 'id' => 'qsd'));
+        $this->assertCount(0, $filtered);
     }
 }

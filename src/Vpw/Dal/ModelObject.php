@@ -10,17 +10,12 @@
 
 namespace Vpw\Dal;
 
-use Zend\Stdlib\ArraySerializableInterface;
 use Vpw\Filter\Word\Ascii\UnderscoreToCamelCase;
-use Zend\Filter\Word\CamelCaseToUnderscore;
 use Zend\Stdlib\Hydrator\HydratorAwareInterface;
-use Zend\Stdlib\Hydrator\ClassMethods;
 use Zend\Stdlib\Hydrator\HydratorInterface;
-use Zend\Stdlib\Hydrator\Filter\MethodMatchFilter;
-use Zend\Stdlib\Hydrator\Filter\FilterComposite;
 use Vpw\Dal\Hydrator\ModelObjectHydrator;
 
-abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, HydratorAwareInterface
+abstract class ModelObject implements \ArrayAccess, HydratorAwareInterface
 {
     /**
      *
@@ -29,7 +24,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
     private static $filter;
 
     /**
-     * @var ClassMethods
+     * @var HydratorInterface
      */
     protected static $defaultHydrator;
 
@@ -81,7 +76,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
     public function __construct(array $data = null)
     {
         if ($data !== null) {
-            $this->exchangeArray($data);
+            $this->getHydrator()->hydrate($data, $this);
         }
     }
 
@@ -130,60 +125,23 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
     }
 
     /**
-     *
+     * Delete function because, only the mapper can load data and the mapper, already everything to load data
      * @param array $data
      */
-    public function load(array $data)
-    {
-        $this->exchangeArray($data);
-        $this->setLoaded(true);
-    }
+
+//     public function load(array $data)
+//     {
+//         $this->exchangeArray($data);
+//         $this->setLoaded(true);
+//     }
 
     /**
-     * @see \Zend\Stdlib\ArraySerializableInterface::exchangeArray()
+     * @param array $data
      */
-    public function exchangeArray(array $data)
-    {
-        $filter = self::getFilter();
-
-        foreach ($data as $name => $value) {
-            if ($value === null) {
-                continue;
-            }
-
-            $methodName = 'set' . $filter->filter($name, true);
-            if (method_exists($this, $methodName) === true) {
-                $this->$methodName($value);
-            }
-        }
-    }
-
-    /**
-     * Returns only "real" data, not metadata like "flags". So if you want cache a model object use
-     * serialize instead of getArrayCopy
-     *
-     * @see \Zend\Stdlib\ArraySerializableInterface::getArrayCopy()
-     */
-    public function getArrayCopy($deep = false)
-    {
-        $copy = $this->getHydrator()->extract($this);
-
-        if ($deep === false) {
-            return $copy;
-        }
-
-        foreach ($copy as $index => $value) {
-            if (is_object($value) && $value instanceof ArraySerializableInterface) {
-                $copy[$index] = $value->getArrayCopy(true);
-            }
-        }
-
-        return $copy;
-    }
 
     public function isLoaded()
     {
-        return $this->loaded;
+        return $this->loaded === true;
     }
 
     public function setLoaded($loaded)
@@ -196,14 +154,19 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
         $this->flags = $flags;
     }
 
-    public function getFlags($flag)
+    public function addFlags($flags)
+    {
+        $this->flags = $this->flags | $flags;
+    }
+
+    public function getFlags()
     {
         return $this->flags;
     }
 
     public function hasFlags($flag)
     {
-        return ($flag & $this->flags === $flag);
+        return (($this->flags & $flag) === $flag);
     }
 
     /**
@@ -211,7 +174,7 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
      */
     public function offsetExists ($offset)
     {
-        return method_exists($this, 'get' . self::getFilter()->filter($offset, true));
+        return method_exists($this, 'set' . self::getFilter()->filter($offset, true));
     }
 
     /**
@@ -266,5 +229,21 @@ abstract class ModelObject implements ArraySerializableInterface, \ArrayAccess, 
     public function setHydrator(HydratorInterface $hydrator)
     {
         $this->hydrator = $hydrator;
+    }
+
+
+    /**
+     * Check if the two values are differents. If yes, it means the identity key has changed => it is potentially
+     * a new record, so we reset the loaded state.
+     *
+     * @param mixed $newValue
+     * @param mixed $oldValue
+     */
+    protected function updateIdentityPart($key, $value)
+    {
+        if ($this->offsetGet($key) !== $value) {
+            $this->{$key} = $value;
+            $this->setLoaded(false);
+        }
     }
 }

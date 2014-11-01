@@ -14,6 +14,8 @@ use Zend\Db\Sql\Update;
 use Zend\Db\Adapter\Adapter;
 use Vpw\Dal\Exception\BadPrimaryKeyException;
 use Vpw\Dal\Exception\NoRowFoundException;
+use Wizzvet\Model\UserPhone;
+use Zend\Stdlib\ArrayObject;
 
 abstract class DbMapper implements MapperInterface
 {
@@ -54,9 +56,9 @@ abstract class DbMapper implements MapperInterface
 
     /**
      * Map of all model object loaded by this mapper
-     * @var array
+     * @var ArrayObject
      */
-    protected $loadedMap = array();
+    protected $loadedMap;
 
     /**
      *
@@ -68,6 +70,7 @@ abstract class DbMapper implements MapperInterface
     {
         $this->adapter = $adapter;
         $this->table = $table;
+        $this->loadedMap = new ArrayObject();
     }
 
     /**
@@ -76,6 +79,15 @@ abstract class DbMapper implements MapperInterface
     public function getAdapter()
     {
         return $this->adapter;
+    }
+
+    /**
+     * Returns the identity map
+     * @return \Zend\Stdlib\ArrayObject
+     */
+    public function getIdentityMap()
+    {
+        return $this->loadedMap;
     }
 
     /**
@@ -97,12 +109,11 @@ abstract class DbMapper implements MapperInterface
      */
     public function insert(ModelObject $object)
     {
-        $statement = $this->getInsertStatement($object);
-        $result = $statement->execute();
+        $result = $this->getInsertStatement($object)->execute();
 
         $aiColumn = $this->getMetadata()->getAutoIncrementColumn();
         if ($aiColumn !== null) {
-            $object->exchangeArray(array($aiColumn->getName() => $this->adapter->getDriver()->getLastGeneratedValue()));
+            $object->offsetSet($aiColumn->getName(), $this->adapter->getDriver()->getLastGeneratedValue());
         }
 
         $object->setLoaded(true);
@@ -111,8 +122,42 @@ abstract class DbMapper implements MapperInterface
     }
 
     /**
-     *
-     * On
+     * (non-PHPdoc)
+     * @see \Vpw\Dal\Mapper\MapperInterface::update()
+     */
+    public function update(ModelObject $object)
+    {
+        return $this->getUpdateStatement($object)
+            ->execute()
+            ->getAffectedRows();
+    }
+
+    /**
+     * Update the row, if the primary key and only if the primary key, already exists
+     * @param ModelObject $object
+     */
+    public function insertOnDuplicatePrimaryKeyUpdate(ModelObject $object)
+    {
+        return $this->getInsertOnDuplicatePrimaryKeyUpdateInsertStatement($object)
+            ->execute()
+            ->getAffectedRows();
+    }
+
+    /**
+     * (non-PHPdoc)
+     * @see \Vpw\Dal\Mapper\MapperInterface::delete()
+     */
+    public function delete(ModelObject $object)
+    {
+        if ($object->isLoaded() === true) {
+            $result = $this->getDeleteStatement($object)->execute();
+            $object->setLoaded(false);
+
+            return $result->getAffectedRows();
+        }
+    }
+
+    /**
      *
      * @param  ModelObject                                $object
      * @return \Zend\Db\Adapter\Driver\StatementInterface
@@ -121,20 +166,10 @@ abstract class DbMapper implements MapperInterface
     {
         $insert = new Insert($this->table);
         $insert->values($this->extractValues($object));
-
         return $this->createStatement($insert);
     }
 
-    /**
-     * (non-PHPdoc)
-     * @see \Vpw\Dal\Mapper\MapperInterface::update()
-     */
-    public function update(ModelObject $object)
-    {
-        $result = $this->getUpdateStatement($object)->execute();
 
-        return $result->getAffectedRows();
-    }
 
     /**
      * @param  ModelObject                $object
@@ -158,38 +193,45 @@ abstract class DbMapper implements MapperInterface
         return $this->createStatement($update);
     }
 
+
     /**
-     * Extract all the values, from the model object,  which will be inserted in the database.
-     * All the values, except :
-     *   - the auto update timestamp column
-     *
      * @param ModelObject $object
-     * @return array
+     * @return \Zend\Db\Adapter\Driver\StatementInterface
      */
-    public function extractValues(ModelObject $object)
+    public function getInsertOnDuplicatePrimaryKeyUpdateInsertStatement(ModelObject $object)
     {
-        $values = array();
-        foreach ($this->getMetadata()->getColumns() as $key => $column) {
-            if ($column->getErrata('on_update') !== 'CURRENT_TIMESTAMP') {
-                $values[$key] = $object->offsetGet($key);
+        $sql = "INSERT INTO " . $this->adapter->getPlatform()->quoteIdentifier($this->getTableName()) .
+            " SET %s ON DUPLICATE KEY UPDATE %s";
+        $pkColumnsName = $this->getMetadata()->getPrimaryKey();
+
+        $insert = array('set' => array(), 'params' => array());
+        $update = array('set' => array(), 'params' => array());
+
+        foreach ($this->extractValues($object) as $name => $value) {
+            $insert['set'][] = $this->adapter->getPlatform()->quoteIdentifier($name) . ' = ?';
+            $insert['params'][] = $value;
+
+            if (in_array($name, $pkColumnsName, true) === false) {
+                $update['set'][] = $this->adapter->getPlatform()->quoteIdentifier($name) . ' = ?';
+                $update['params'][] = $value;
             }
         }
-        return $values;
+
+        $sql = sprintf(
+            $sql,
+            implode(', ', $insert['set']),
+            implode(', ', $update['set'])
+        );
+
+        $stmt = $this->getAdapter()->getDriver()->createStatement();
+        $stmt->setSql($sql);
+        $stmt->setParameterContainer(new ParameterContainer(array_merge($insert['params'], $update['params'])));
+
+        return $stmt;
     }
 
-    /**
-     * (non-PHPdoc)
-     * @see \Vpw\Dal\Mapper\MapperInterface::delete()
-     */
-    public function delete(ModelObject $object)
-    {
-        if ($object->isLoaded() === true) {
-            $result = $this->getDeleteStatement($object)->execute();
-            $object->setLoaded(false);
 
-            return $result->getAffectedRows();
-        }
-    }
+
 
     /**
      * @param  ModelObject                $object
@@ -197,7 +239,7 @@ abstract class DbMapper implements MapperInterface
      */
     public function getDeleteStatement(ModelObject $object)
     {
-        $data = $object->getArrayCopy();
+        $data = $this->extractValues($object);
         $pkColumnsName = $this->getMetadata()->getPrimaryKey();
 
         $where = array();
@@ -210,6 +252,27 @@ abstract class DbMapper implements MapperInterface
 
         return $this->createStatement($delete);
     }
+
+
+    /**
+     * Extract all the values, from the model object,  which will be inserted in the database.
+     * All the values, except :
+     *   - the auto update timestamp column
+     *
+     * @param ModelObject $object
+     * @return array
+     */
+    private function extractValues(ModelObject $object)
+    {
+        $values = array();
+        foreach ($this->getMetadata()->getColumns() as $key => $column) {
+            if ($column->getErrata('on_update') !== 'CURRENT_TIMESTAMP') {
+                $values[$key] = $object->offsetGet($key);
+            }
+        }
+        return $values;
+    }
+
 
     /**
      * Create a statement based on an SQL object + set type hinting
@@ -357,42 +420,6 @@ abstract class DbMapper implements MapperInterface
     }
 
 
-    protected function selectToCollection($select, $flags = 0)
-    {
-        $hasLimit = $select->getRawState(Select::LIMIT) !== null;
-
-        if ($hasLimit === true) {
-            $select->quantifier("SQL_CALC_FOUND_ROWS");
-        }
-
-        $resultSet = $this->createStatement($select)->execute();
-
-        if ($hasLimit === true) {
-            $totalNbRowsResult = $this->adapter->getDriver()->getConnection()->execute("SELECT FOUND_ROWS() as nb");
-            $totalNbRows = $totalNbRowsResult->current()['nb'];
-            $totalNbRowsResult->getResource()->close();
-        }
-
-        $collection = $this->loadData($resultSet, $flags);
-
-        if ($hasLimit === true) {
-            $collection->setTotalNbRows($totalNbRows);
-        }
-
-        $resultSet->getResource()->close();
-
-        return $collection;
-    }
-
-
-    protected function selectToModel($select, $flags = 0)
-    {
-        $collection = $this->selectToCollection($select, $flags);
-        $collection->rewind();
-        return $collection->current();
-    }
-
-
     /**
      *
      * @param string $where
@@ -419,7 +446,7 @@ abstract class DbMapper implements MapperInterface
      * @param Select $select
      * @param array $options
      */
-    public function completeSelectWithOptions(Select $select, array $options)
+    protected function completeSelectWithOptions(Select $select, array $options)
     {
         if (isset($options['limit']) === true) {
             $select->limit($options['limit']);
@@ -456,6 +483,42 @@ abstract class DbMapper implements MapperInterface
         return $where;
     }
 
+
+    protected function selectToCollection($select, $flags = 0)
+    {
+        $hasLimit = $select->getRawState(Select::LIMIT) !== null;
+
+        if ($hasLimit === true) {
+            $select->quantifier("SQL_CALC_FOUND_ROWS");
+        }
+
+        $resultSet = $this->createStatement($select)->execute();
+
+        if ($hasLimit === true) {
+            $totalNbRowsResult = $this->adapter->getDriver()->getConnection()->execute("SELECT FOUND_ROWS() as nb");
+            $totalNbRows = $totalNbRowsResult->current()['nb'];
+            $totalNbRowsResult->getResource()->close();
+        }
+
+        $collection = $this->loadData($resultSet, $flags);
+
+        if ($hasLimit === true) {
+            $collection->setTotalNbRows($totalNbRows);
+        }
+
+        $resultSet->getResource()->close();
+
+        return $collection;
+    }
+
+
+    protected function selectToModel($select, $flags = 0)
+    {
+        $collection = $this->selectToCollection($select, $flags);
+        $collection->rewind();
+        return $collection->current();
+    }
+
     /**
      *
      * @param  \Iterator       $resultSet
@@ -480,27 +543,34 @@ abstract class DbMapper implements MapperInterface
      */
     public function load($data, $flags = 0)
     {
-        $key = $this->getModelObjectKey($data);
-
-        if (isset($this->loadedMap[$key]) === false) {
-            $this->loadedMap[$key] = $this->doLoad($data, $flags);
-        }
-
-        return $this->loadedMap[$key];
+        return $this->doLoad($data, $flags);
     }
 
     /**
      *
-     * @param  unknown              $data
+     * @param  unknown $data
      * @return \Vpw\Dal\ModelObject
      */
     protected function doLoad($data, $flags = 0)
     {
-        $object = $this->createModelObject($data);
-        $object->load($data);
-        $object->setFlags($flags);
+        $key = $this->getModelObjectKey($data);
 
-        return  $object;
+        if (isset($this->loadedMap[$key]) === false) {
+            $model = $this->createModelObject();
+        } else {
+            $model = $this->loadedMap[$key];
+        }
+
+        foreach ($data as $key => $value) {
+            if ($model->offsetExists($key, $value) === true) {
+                $model->offsetSet($key, $value);
+            }
+        }
+
+        $model->setLoaded(true);
+        $model->setFlags($flags);
+
+        return $model;
     }
 
 
@@ -508,7 +578,7 @@ abstract class DbMapper implements MapperInterface
      * For performance reason, we clone a prototype
      * @return \Vpw\Dal\ModelObject
      */
-    public function createModelObject($data = null)
+    public function createModelObject()
     {
         return clone $this->getModelObjectPrototype();
     }
@@ -530,7 +600,7 @@ abstract class DbMapper implements MapperInterface
      *
      * @param array|\ArrayAccess|string $data
      */
-    private function getModelObjectKey($data)
+    public function getModelObjectKey($data)
     {
         if (is_scalar($data) === true) {
             return strval($data);

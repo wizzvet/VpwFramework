@@ -9,6 +9,13 @@ use Vpw\Dal\ModelCollection;
 
 class ModelObjectTest extends PHPUnit_Framework_TestCase
 {
+    const MEMBER = 4;
+
+    const USER = 8;
+
+    const EXPERT = 16;
+
+
 
     public function testEmptyConstruct()
     {
@@ -22,51 +29,6 @@ class ModelObjectTest extends PHPUnit_Framework_TestCase
         $foo = new FooObject(array('foo'=>'bar'));
         $this->assertEquals('bar', $foo->getFoo());
         $this->assertFalse($foo->isLoaded());
-    }
-
-    public function testLoad()
-    {
-        $foo = new FooObject();
-        $foo->load(array('foo'=>'bar'));
-        $this->assertEquals('bar', $foo->getFoo());
-        $this->assertTrue($foo->isLoaded());
-    }
-
-    public function testArrayCopy()
-    {
-        $data = array(
-            'foo'=>'bar',
-            'ref' => null,
-            'id' => null,
-            'object' => null,
-            'update_time' => '2014-09-22 10:42:00'
-        );
-        $foo = new FooObject($data);
-        $copy = $foo->getArrayCopy();
-        $this->assertEquals($data, $copy);
-    }
-
-    public function testDeepArrayCopy()
-    {
-        $data2 = array('id' => 4, 'foo' => 'barz', 'ref' => 'wizzvet');
-        $data = array('foo'=>'bar', 'id' => null);
-        $foo = new FooObject($data);
-        $foo->setRef(new Foo2Object($data2));
-
-        $copy = $foo->getArrayCopy(true);
-        $this->assertTrue(is_array($copy['ref']), 'ref is not an array');
-        $this->assertEquals($copy['ref'], $data2);
-    }
-
-    public function testDeepArrayCopyWithCollection()
-    {
-        $data2 = array('id' => 4, 'foo' => 'barz', 'ref' => 'wizzvet');
-        $data = array('foo'=>'bar', 'id' => null);
-        $foo = new FooObject($data);
-        $foo->setRef(new ModelCollection(array(new Foo2Object($data2))));
-
-        $copy = $foo->getArrayCopy(true);
-        $this->assertTrue(is_array($copy['ref']), 'ref is not an array');
     }
 
     public function testHydrator()
@@ -104,32 +66,35 @@ class ModelObjectTest extends PHPUnit_Framework_TestCase
         $this->assertEquals('id-foo-bar', $foo->getIdentityKey());
     }
 
-    public function testSerialization()
+    public function testAddFlags()
     {
-        $data = array('id' => 4, 'foo' => 'barz', 'ref' => 'wizzvet');
-        $foo = new FooObject($data);
-        $newFoo = unserialize(serialize($foo));
-        $this->assertEquals($newFoo, $foo);
+        $foo = new FooObject();
+        $foo->addFlags(self::MEMBER);
+        $this->assertTrue($foo->hasFlags(self::MEMBER));
+        $this->assertFalse($foo->hasFlags(self::USER));
     }
 
-
-    public function testSerializationWithSubObject()
+    public function testChangeFlags()
     {
-        $foo = new FooObject(
-            array(
-                'id' => 4,
-                'foo' => 'barz',
-                'object' => new Foo2Object(
-                    array(
-                        'id' => 18,
-                        'foo' => 'bar2'
-                    )
-                ),
-            )
-        );
+        $foo = new FooObject();
+        $foo->setFlags(self::USER);
+        $foo->addFlags(self::MEMBER);
 
-        $newFoo = unserialize(serialize($foo));
-        $this->assertEquals($newFoo, $foo);
+        $this->assertTrue($foo->hasFlags(self::USER));
+        $this->assertTrue($foo->hasFlags(self::MEMBER));
+        $this->assertFalse($foo->hasFlags(self::EXPERT));
+    }
+
+    public function testReplaceFlags()
+    {
+        $foo = new FooObject();
+        $foo->addFlags(self::MEMBER);
+        $foo->setFlags(self::EXPERT);
+
+        $this->assertFalse($foo->hasFlags(self::USER));
+        $this->assertFalse($foo->hasFlags(self::MEMBER));
+        $this->assertTrue($foo->hasFlags(self::EXPERT));
+        $this->assertEquals(self::EXPERT, $foo->getFlags());
     }
 
 }

@@ -7,6 +7,7 @@
 namespace Vpw\Dal\Mapper;
 
 use Vpw\Dal\ModelObject;
+use Zend\Stdlib\Hydrator\HydratorInterface;
 
 interface MapperInterface
 {

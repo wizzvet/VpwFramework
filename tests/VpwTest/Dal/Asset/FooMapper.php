@@ -31,7 +31,7 @@ class FooMapper extends DbMapper
 
         $pkConstraint = new ConstraintObject('pk', 'bar', 'buz');
         $pkConstraint->setType('PRIMARY KEY');
-        $pkConstraint->setColumns(array('id'));
+        $pkConstraint->setColumns(array('foo'));
 
         return new DbMetadata(
             array(

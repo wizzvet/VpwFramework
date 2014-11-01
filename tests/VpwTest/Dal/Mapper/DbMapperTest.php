@@ -48,14 +48,14 @@ class DbMapperTest extends PHPUnit_Framework_TestCase
             array(
                 'foo' => 'bar',
                 'ref' => 'titi',
-                'update_time' => '2014-09-23 10:42:20'
+                'update_time' => '2014-09-23 10:42:20',
+                'id' => 22
             )
         );
     }
 
     public function testInsertStatement()
     {
-        $this->object->setId(22);
         $stmt = $this->mapper->getInsertStatement($this->object);
         $this->assertEquals("INSERT INTO `foo` (`foo`, `ref`, `id`) VALUES (?, ?, ?)", $stmt->getSql());
 
@@ -71,31 +71,41 @@ class DbMapperTest extends PHPUnit_Framework_TestCase
 
     public function testUpdateStatement()
     {
-        $this->object->setId(22);
         $stmt = $this->mapper->getUpdateStatement($this->object);
-        $this->assertEquals("UPDATE `foo` SET `foo` = ?, `ref` = ? WHERE `id` = ?", $stmt->getSql());
+        $this->assertEquals("UPDATE `foo` SET `ref` = ?, `id` = ? WHERE `foo` = ?", $stmt->getSql());
 
         $parameterContainer = $stmt->getParameterContainer();
 
         $this->assertCount(3, $parameterContainer);
 
-        $this->assertEquals(22, $parameterContainer->offsetGet('where1'));
-        $this->assertEquals('bar', $parameterContainer->offsetGet('foo'));
+        $this->assertEquals('bar', $parameterContainer->offsetGet('where1'));
+        $this->assertEquals(22, $parameterContainer->offsetGet('id'));
         $this->assertEquals('titi', $parameterContainer->offsetGet('ref'));
     }
 
     public function testDeleteStatement()
     {
-        $this->object->setId(22);
         $this->object->setLoaded(true);
 
         $stmt = $this->mapper->getDeleteStatement($this->object);
-        $this->assertEquals("DELETE FROM `foo` WHERE `id` = ?", $stmt->getSql());
+        $this->assertEquals("DELETE FROM `foo` WHERE `foo` = ?", $stmt->getSql());
 
         $parameterContainer = $stmt->getParameterContainer();
 
         $this->assertCount(1, $parameterContainer);
+        $this->assertEquals('bar', $parameterContainer->offsetGet('where1'));
+    }
 
-        $this->assertEquals(22, $parameterContainer->offsetGet('where1'));
+    public function testInsertOnDuplicatePrimaryKeyUpdateInsertStatement()
+    {
+        $stmt = $this->mapper->getInsertOnDuplicatePrimaryKeyUpdateInsertStatement($this->object);
+        $this->assertEquals(
+            "INSERT INTO `foo` SET `foo` = ?, `ref` = ?, `id` = ? ON DUPLICATE KEY UPDATE `ref` = ?, `id` = ?",
+            $stmt->getSql()
+        );
+
+        $parameterContainer = $stmt->getParameterContainer();
+
+        $this->assertCount(5, $parameterContainer);
     }
 }
